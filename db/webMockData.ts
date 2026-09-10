@@ -101,6 +101,11 @@ export const mockFixedExpenses = [
   { id: 4, name: 'Seguro médico', amount: 6400, dayOfMonth: 10, active: false, categoryId: 6, categoryName: 'Salud', categoryIcon: 'heart-pulse', categoryColor: '#E0603C' },
 ];
 
+export const mockExpensesToday = [
+  { id: 1, amount: 3420, subcategoryName: 'Supermercado', categoryName: 'Comida', categoryColor: '#E0603C' },
+  { id: 2, amount: 480, subcategoryName: 'Bares y cafés', categoryName: 'Comida', categoryColor: '#E0603C' },
+];
+
 export const mockProfile = {
   id: 1,
   annualSalary: 3600000,
@@ -148,11 +153,15 @@ export const mockNetWorthHistory = [
   { monthKey: '2026-08', netWorth: 1218000 },
 ];
 
+// Incluye tanto lo fijo (p.ej. el alquiler dentro de Hogar) como lo variable,
+// igual que hace getCategoryBreakdown de verdad; la suma cuadra con
+// mockFixedTotal + mockVariableTotal.
 export const mockCategoryBreakdown = [
+  { categoryId: 5, name: 'Hogar', color: '#C9A227', amount: 97690 },
   { categoryId: 1, name: 'Comida', color: '#E0603C', amount: 16920 },
-  { categoryId: 5, name: 'Hogar', color: '#C9A227', amount: 12690 },
-  { categoryId: 4, name: 'Deporte', color: '#0E9E92', amount: 8460 },
-  { categoryId: 8, name: 'Otros', color: '#8A928E', amount: 4230 },
+  { categoryId: 4, name: 'Deporte', color: '#0E9E92', amount: 12450 },
+  { categoryId: 8, name: 'Otros', color: '#8A928E', amount: 4280 },
+  { categoryId: 7, name: 'Suscripciones', color: '#0E9E92', amount: 1599 },
 ];
 
 const dailyThisMonth = [

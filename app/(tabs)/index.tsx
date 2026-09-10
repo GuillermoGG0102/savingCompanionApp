@@ -1,16 +1,12 @@
-import { Redirect, router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CategoryDonut } from '@/components/charts/CategoryDonut';
-import { DailySpendChart } from '@/components/charts/DailySpendChart';
-import { NetWorthLineChart } from '@/components/charts/NetWorthLineChart';
 import type { CategorySlice } from '@/db/queries/dashboard';
 import {
   getCategoryBreakdown,
   getCurrentNetWorth,
-  getHistoricalDailyAverage,
   getNetWorthHistory,
   getThisMonthDailyAccumulated,
 } from '@/db/queries/dashboard';
@@ -25,67 +21,52 @@ const theme = colors.light;
 const currentMonthKey = getCurrentMonthKey();
 const targetMonthKey = getPreviousMonthKey(currentMonthKey);
 
-type DashboardData = {
+type InicioData = {
   netWorth: number;
   netWorthDelta: number | null;
-  netWorthHistory: { monthKey: string; netWorth: number }[];
   savings: number;
   savingsRate: number;
   categoryBreakdown: CategorySlice[];
-  thisMonthDaily: number[];
-  averageDaily: number[];
-  worseThanUsual: boolean;
   pendingClose: boolean;
 };
 
-export default function Dashboard() {
-  const [status, setStatus] = useState<'loading' | 'needs-onboarding' | 'ready'>('loading');
-  const [data, setData] = useState<DashboardData | null>(null);
+export default function Inicio() {
+  const [data, setData] = useState<InicioData | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const profile = await getProfile();
-        if (!profile) {
-          setStatus('needs-onboarding');
-          return;
-        }
-
-        const [netWorth, history, closePending, fixedTotal, thisMonthDaily, averageDaily, categoryBreakdown] =
+        const [profile, netWorth, history, closePending, fixedTotal, thisMonthDaily, categoryBreakdown] =
           await Promise.all([
+            getProfile(),
             getCurrentNetWorth(),
             getNetWorthHistory(12),
             getMonthClose(targetMonthKey),
             computeFixedTotal(),
             getThisMonthDailyAccumulated(currentMonthKey),
-            getHistoricalDailyAverage(currentMonthKey),
             getCategoryBreakdown(currentMonthKey),
           ]);
 
         const today = Math.min(new Date().getDate(), thisMonthDaily.length) - 1;
         const variableSoFar = thisMonthDaily[today] ?? 0;
-        const savings = calculateSavings(profile.monthlyNetPay, fixedTotal, variableSoFar);
-        const savingsRate = calculateSavingsRate(savings, profile.monthlyNetPay);
+        const income = profile?.monthlyNetPay ?? 0;
+        const savings = calculateSavings(income, fixedTotal, variableSoFar);
+        const savingsRate = calculateSavingsRate(savings, income);
         const lastClosed = history[history.length - 1];
 
         setData({
           netWorth,
           netWorthDelta: lastClosed ? calculateNetWorthDelta(netWorth, lastClosed.netWorth) : null,
-          netWorthHistory: history,
           savings,
           savingsRate,
-          categoryBreakdown,
-          thisMonthDaily,
-          averageDaily,
-          worseThanUsual: variableSoFar > (averageDaily[today] ?? 0) * 1.1,
+          categoryBreakdown: categoryBreakdown.slice(0, 3),
           pendingClose: !closePending,
         });
-        setStatus('ready');
       })();
     }, [])
   );
 
-  if (status === 'loading' || !data) {
+  if (!data) {
     return (
       <SafeAreaView style={[styles.screen, styles.center]}>
         <ActivityIndicator color={theme.accent} />
@@ -93,25 +74,11 @@ export default function Dashboard() {
     );
   }
 
-  if (status === 'needs-onboarding') {
-    return <Redirect href="/onboarding/salary" />;
-  }
-
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.topRow}>
-        <Text style={styles.brand}>SAVING COMPANION</Text>
-        <View style={styles.iconRow}>
-          <Pressable style={styles.iconBtn} onPress={() => router.push('/gastos-fijos')}>
-            <Text>🔁</Text>
-          </Pressable>
-          <Pressable style={styles.iconBtn} onPress={() => router.push('/categorias')}>
-            <Text>🏷️</Text>
-          </Pressable>
-        </View>
-      </View>
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <Text style={styles.brand}>SAVING COMPANION</Text>
 
-      <View style={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll}>
         {data.pendingClose && (
           <Pressable style={styles.banner} onPress={() => router.push('/cierre-mensual')}>
             <Text style={styles.bannerIcon}>📅</Text>
@@ -144,42 +111,24 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {data.worseThanUsual && (
-          <View style={styles.alert}>
-            <Text style={styles.alertIcon}>⚠️</Text>
-            <Text style={styles.alertText}>Vas gastando más rápido que lo habitual este mes.</Text>
-          </View>
-        )}
-
         {data.categoryBreakdown.length > 0 && (
           <View style={styles.card}>
             <View style={styles.cardHead}>
-              <Text style={styles.cardTitle}>Gasto por categoría</Text>
+              <Text style={styles.cardTitle}>Dónde se va</Text>
+              <Pressable onPress={() => router.push('/gastos')}>
+                <Text style={styles.seeAll}>Ver todo →</Text>
+              </Pressable>
             </View>
-            <CategoryDonut data={data.categoryBreakdown} />
+            {data.categoryBreakdown.map((c) => (
+              <View key={c.categoryId} style={styles.catRow}>
+                <View style={[styles.catDot, { backgroundColor: c.color }]} />
+                <Text style={styles.catName}>{c.name}</Text>
+                <Text style={styles.catValue}>{formatCents(c.amount)}</Text>
+              </View>
+            ))}
           </View>
         )}
-
-        {data.netWorthHistory.length > 1 && (
-          <View style={styles.card}>
-            <View style={styles.cardHead}>
-              <Text style={styles.cardTitle}>Evolución del patrimonio</Text>
-            </View>
-            <NetWorthLineChart data={data.netWorthHistory} />
-          </View>
-        )}
-
-        <View style={styles.card}>
-          <View style={styles.cardHead}>
-            <Text style={styles.cardTitle}>Gasto acumulado vs. media histórica</Text>
-          </View>
-          <DailySpendChart thisMonth={data.thisMonthDaily} average={data.averageDaily} />
-        </View>
-      </View>
-
-      <Pressable style={styles.fab} onPress={() => router.push('/registrar-gasto')}>
-        <Text style={styles.fabLabel}>+</Text>
-      </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -187,17 +136,17 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background },
   center: { alignItems: 'center', justifyContent: 'center' },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  brand: {
+    fontFamily: typography.fontMono,
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: theme.accent,
+    fontWeight: '600',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
   },
-  brand: { fontFamily: typography.fontMono, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: theme.accent, fontWeight: '600' },
-  iconRow: { flexDirection: 'row', gap: 8 },
-  iconBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center' },
-  scroll: { flex: 1, padding: spacing.xl, gap: spacing.md },
+  scroll: { padding: spacing.xl, gap: spacing.md },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,31 +169,12 @@ const styles = StyleSheet.create({
   statValue: { fontFamily: typography.fontDisplay, fontSize: 16, fontWeight: '600', color: theme.textPrimary, marginTop: 3 },
   pos: { color: theme.accent },
   neg: { color: theme.negative },
-  alert: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(224,96,60,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(224,96,60,0.25)',
-  },
-  alertIcon: { fontSize: 16 },
-  alertText: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12, color: '#8a3d28' },
   card: { borderRadius: radius.lg, padding: 16, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
-  cardHead: { marginBottom: 10 },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 },
   cardTitle: { fontFamily: typography.fontMono, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: theme.textMuted, fontWeight: '600' },
-  fab: {
-    position: 'absolute',
-    right: 18,
-    bottom: 22,
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: theme.textPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabLabel: { color: theme.background, fontSize: 24, lineHeight: 26 },
+  seeAll: { fontFamily: typography.fontDisplay, fontSize: 11, fontWeight: '600', color: theme.accent },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  catDot: { width: 9, height: 9, borderRadius: 3 },
+  catName: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12.5, color: theme.textPrimary },
+  catValue: { fontFamily: typography.fontMono, fontSize: 12.5, fontWeight: '600', color: theme.textPrimary },
 });
