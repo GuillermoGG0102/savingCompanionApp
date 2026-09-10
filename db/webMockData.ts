@@ -135,3 +135,32 @@ export const mockMonthCloses = [
     closedAt: `${priorMonthKey}-01T00:00:00.000Z`,
   },
 ];
+
+// Dashboard (F4)
+export const mockCurrentNetWorth = 1225000;
+
+export const mockNetWorthHistory = [
+  { monthKey: '2026-03', netWorth: 1050000 },
+  { monthKey: '2026-04', netWorth: 1080000 },
+  { monthKey: '2026-05', netWorth: 1110000 },
+  { monthKey: '2026-06', netWorth: 1140000 },
+  { monthKey: '2026-07', netWorth: 1175000 },
+  { monthKey: '2026-08', netWorth: 1218000 },
+];
+
+export const mockCategoryBreakdown = [
+  { categoryId: 1, name: 'Comida', color: '#E0603C', amount: 16920 },
+  { categoryId: 5, name: 'Hogar', color: '#C9A227', amount: 12690 },
+  { categoryId: 4, name: 'Deporte', color: '#0E9E92', amount: 8460 },
+  { categoryId: 8, name: 'Otros', color: '#8A928E', amount: 4230 },
+];
+
+const dailyThisMonth = [
+  0, 3200, 3200, 8900, 8900, 8900, 15400, 15400, 21000, 21000, 26500, 34000, 34000, 34000, 41200, 41200, 42350,
+];
+export const mockDailyThisMonthCurve = [
+  ...dailyThisMonth,
+  ...new Array(28 - dailyThisMonth.length).fill(dailyThisMonth[dailyThisMonth.length - 1]),
+];
+
+export const mockDailyAverageCurve = Array.from({ length: 28 }, (_, i) => Math.round(((i + 1) / 28) * 35500));

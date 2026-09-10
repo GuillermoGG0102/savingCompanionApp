@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
+    "@shopify/react-native-skia": "2.6.2",
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.0",
     "expo-constants": "~57.0.17",
@@ -20,6 +21,7 @@
     "react-native-screens": "~4.26.0",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.4",
+    "victory-native": "^42.0.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

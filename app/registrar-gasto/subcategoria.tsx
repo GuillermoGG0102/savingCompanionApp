@@ -15,7 +15,7 @@ import { colors, radius, spacing, typography } from '@/theme/tokens';
 const theme = colors.light;
 
 export default function RegistrarGastoSubcategoria() {
-  const { amountCents, categoryId, categoryName, reset } = useQuickExpenseDraft();
+  const { amountCents, date, categoryId, categoryName, reset } = useQuickExpenseDraft();
   const [subcategories, setSubcategories] = useState<{ id: number; name: string }[] | null>(null);
   const [showCustom, setShowCustom] = useState(false);
   const [customName, setCustomName] = useState('');
@@ -30,7 +30,7 @@ export default function RegistrarGastoSubcategoria() {
     await createExpense({
       subcategoryId,
       amount: amountCents,
-      date: new Date().toISOString().slice(0, 10),
+      date,
     });
     reset();
     router.replace({

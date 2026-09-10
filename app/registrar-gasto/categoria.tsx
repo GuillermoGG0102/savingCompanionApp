@@ -15,6 +15,7 @@ const theme = colors.light;
 
 export default function RegistrarGastoCategoria() {
   const amountCents = useQuickExpenseDraft((s) => s.amountCents);
+  const date = useQuickExpenseDraft((s) => s.date);
   const setCategory = useQuickExpenseDraft((s) => s.setCategory);
   const reset = useQuickExpenseDraft((s) => s.reset);
   const [categories, setCategories] = useState<CategoryWithSubcategories[] | null>(null);
@@ -35,7 +36,7 @@ export default function RegistrarGastoCategoria() {
       await createExpense({
         subcategoryId: generic.id,
         amount: amountCents,
-        date: new Date().toISOString().slice(0, 10),
+        date,
       });
       reset();
       router.replace({
