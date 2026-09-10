@@ -1,5 +1,6 @@
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -23,6 +24,13 @@ export default function RootLayout() {
       .then(() => setSeedDone(true))
       .catch((err: Error) => setSeedError(err));
   }, [migrationsDone]);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(() => {
+      router.push('/registrar-gasto');
+    });
+    return () => subscription.remove();
+  }, []);
 
   const error = migrationError ?? seedError;
   if (error) {
