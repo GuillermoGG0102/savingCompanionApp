@@ -1,49 +1,81 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { Redirect, router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, spacing, typography } from '@/theme/tokens';
+import { getProfile } from '@/db/queries/profile';
+import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 const theme = colors.light;
 
-export default function Placeholder() {
+export default function Home() {
+  const [status, setStatus] = useState<'loading' | 'needs-onboarding' | 'ready'>('loading');
+
+  useFocusEffect(
+    useCallback(() => {
+      getProfile().then((profile) => setStatus(profile ? 'ready' : 'needs-onboarding'));
+    }, [])
+  );
+
+  if (status === 'loading') {
+    return (
+      <SafeAreaView style={[styles.screen, styles.center]}>
+        <ActivityIndicator color={theme.accent} />
+      </SafeAreaView>
+    );
+  }
+
+  if (status === 'needs-onboarding') {
+    return <Redirect href="/onboarding/salary" />;
+  }
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar style="dark" />
-      <Text style={[styles.label, { color: theme.accent }]}>Saving Companion</Text>
-      <Text style={[styles.title, { color: theme.textPrimary }]}>Cimientos listos (F1)</Text>
-      <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-        Base de datos, esquema y sistema de diseño en marcha. Las pantallas de verdad llegan en F2.
-      </Text>
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.pad}>
+        <Text style={styles.label}>Saving Companion</Text>
+        <Text style={styles.title}>¿Qué quieres hacer?</Text>
+        <Text style={styles.hint}>El panel con tu ahorro y patrimonio llega en la siguiente fase (F4).</Text>
+
+        <View style={styles.actions}>
+          <Pressable style={styles.primaryAction} onPress={() => router.push('/registrar-gasto')}>
+            <Text style={styles.primaryActionLabel}>+ Registrar gasto</Text>
+          </Pressable>
+          <Pressable style={styles.action} onPress={() => router.push('/gastos-fijos')}>
+            <Text style={styles.actionLabel}>Gastos fijos</Text>
+          </Pressable>
+          <Pressable style={styles.action} onPress={() => router.push('/categorias')}>
+            <Text style={styles.actionLabel}>Categorías</Text>
+          </Pressable>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xxl,
-    gap: spacing.sm,
-  },
+  screen: { flex: 1, backgroundColor: theme.background },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  pad: { flex: 1, padding: spacing.xl },
   label: {
     fontFamily: typography.fontMono,
-    fontSize: typography.size.xs,
+    fontSize: 10.5,
     letterSpacing: 2,
     textTransform: 'uppercase',
-  },
-  title: {
-    fontFamily: typography.fontDisplay,
-    fontSize: typography.size.xl,
+    color: theme.accent,
     fontWeight: '600',
-    marginTop: spacing.sm,
-    textAlign: 'center',
   },
-  subtitle: {
-    fontFamily: typography.fontDisplay,
-    fontSize: typography.size.base,
-    textAlign: 'center',
-    marginTop: spacing.xs,
+  title: { fontFamily: typography.fontDisplay, fontSize: 24, fontWeight: '600', color: theme.textPrimary, marginTop: 8 },
+  hint: { fontFamily: typography.fontDisplay, fontSize: 12.5, color: theme.textSecondary, marginTop: 6, lineHeight: 18 },
+  actions: { gap: spacing.sm, marginTop: spacing.xxl },
+  primaryAction: { backgroundColor: theme.textPrimary, borderRadius: radius.lg, padding: 16, alignItems: 'center' },
+  primaryActionLabel: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 14, color: theme.background },
+  action: {
+    backgroundColor: theme.surface,
+    borderRadius: radius.lg,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
   },
+  actionLabel: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 14, color: theme.textPrimary },
 });
