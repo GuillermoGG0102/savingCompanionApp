@@ -108,9 +108,6 @@ export default function Dashboard() {
           <Pressable style={styles.iconBtn} onPress={() => router.push('/categorias')}>
             <Text>🏷️</Text>
           </Pressable>
-          <Pressable style={styles.iconBtn} onPress={() => router.push('/ajustes')}>
-            <Text>⚙️</Text>
-          </Pressable>
         </View>
       </View>
 
