@@ -11,19 +11,21 @@ type Props = {
   suffix?: string;
   placeholder?: string;
   keyboardType?: KeyboardTypeOptions;
+  editable?: boolean;
 };
 
-export function TextField({ label, value, onChangeText, suffix, placeholder, keyboardType }: Props) {
+export function TextField({ label, value, onChangeText, suffix, placeholder, keyboardType, editable = true }: Props) {
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputRow}>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <View style={[styles.inputRow, !editable && styles.inputRowDisabled]}>
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={theme.textMuted}
           keyboardType={keyboardType}
+          editable={editable}
           style={styles.input}
         />
         {suffix ? <Text style={styles.suffix}>{suffix}</Text> : null}
@@ -52,6 +54,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
+  },
+  inputRowDisabled: {
+    opacity: 0.6,
   },
   input: {
     flex: 1,

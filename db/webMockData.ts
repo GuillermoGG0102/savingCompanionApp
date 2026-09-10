@@ -108,3 +108,30 @@ export const mockProfile = {
   currency: 'EUR',
   payDayOfMonth: 25,
 };
+
+// Mes que se muestra ya cerrado, y activos con el valor que tenían entonces.
+import { getCurrentMonthKey, getPreviousMonthKey } from '@/lib/month';
+
+const targetMonthKey = getPreviousMonthKey(getCurrentMonthKey());
+const priorMonthKey = getPreviousMonthKey(targetMonthKey);
+
+export const mockAssets = [
+  { id: 1, name: 'Cuenta corriente', type: 'bank' as const, latestValue: 320000 },
+  { id: 2, name: 'Efectivo', type: 'cash' as const, latestValue: 15000 },
+  { id: 3, name: 'Fondo indexado', type: 'investment' as const, latestValue: 840000 },
+];
+
+export const mockFixedTotal = mockFixedExpenses.filter((e) => e.active).reduce((sum, e) => sum + e.amount, 0);
+export const mockVariableTotal = 42350;
+
+export const mockMonthCloses = [
+  {
+    monthKey: priorMonthKey,
+    income: 210000,
+    fixedTotal: 90589,
+    variableTotal: 35000,
+    netWorth: 1175000,
+    savingsRate: (210000 - 90589 - 35000) / 210000,
+    closedAt: `${priorMonthKey}-01T00:00:00.000Z`,
+  },
+];

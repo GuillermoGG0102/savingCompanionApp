@@ -3,17 +3,22 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { getMonthClose } from '@/db/queries/monthClose';
 import { getProfile } from '@/db/queries/profile';
+import { formatMonthLabel, getCurrentMonthKey, getPreviousMonthKey } from '@/lib/month';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 const theme = colors.light;
+const targetMonthKey = getPreviousMonthKey(getCurrentMonthKey());
 
 export default function Home() {
   const [status, setStatus] = useState<'loading' | 'needs-onboarding' | 'ready'>('loading');
+  const [pendingClose, setPendingClose] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       getProfile().then((profile) => setStatus(profile ? 'ready' : 'needs-onboarding'));
+      getMonthClose(targetMonthKey).then((close) => setPendingClose(!close));
     }, [])
   );
 
@@ -35,6 +40,17 @@ export default function Home() {
         <Text style={styles.label}>Saving Companion</Text>
         <Text style={styles.title}>¿Qué quieres hacer?</Text>
         <Text style={styles.hint}>El panel con tu ahorro y patrimonio llega en la siguiente fase (F4).</Text>
+
+        {pendingClose && (
+          <Pressable style={styles.banner} onPress={() => router.push('/cierre-mensual')}>
+            <Text style={styles.bannerIcon}>📅</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bannerTitle}>Cierra {formatMonthLabel(targetMonthKey)}</Text>
+              <Text style={styles.bannerSubtitle}>Toca para registrar el valor de tus activos</Text>
+            </View>
+            <Text style={styles.bannerGo}>Ir →</Text>
+          </Pressable>
+        )}
 
         <View style={styles.actions}>
           <Pressable style={styles.primaryAction} onPress={() => router.push('/registrar-gasto')}>
@@ -66,6 +82,19 @@ const styles = StyleSheet.create({
   },
   title: { fontFamily: typography.fontDisplay, fontSize: 24, fontWeight: '600', color: theme.textPrimary, marginTop: 8 },
   hint: { fontFamily: typography.fontDisplay, fontSize: 12.5, color: theme.textSecondary, marginTop: 6, lineHeight: 18 },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: 14,
+    borderRadius: radius.lg,
+    backgroundColor: theme.cardGradientTo,
+    marginTop: spacing.lg,
+  },
+  bannerIcon: { fontSize: 20 },
+  bannerTitle: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 13, color: theme.background },
+  bannerSubtitle: { fontFamily: typography.fontDisplay, fontSize: 11, color: '#B9CBC6' },
+  bannerGo: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12, color: theme.accentStrong },
   actions: { gap: spacing.sm, marginTop: spacing.xxl },
   primaryAction: { backgroundColor: theme.textPrimary, borderRadius: radius.lg, padding: 16, alignItems: 'center' },
   primaryActionLabel: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 14, color: theme.background },

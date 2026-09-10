@@ -16,6 +16,7 @@ export function formatCents(cents: number, currency = 'EUR'): string {
   const formatted = new Intl.NumberFormat('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+    useGrouping: 'always',
   }).format(value);
   const symbol = currency === 'EUR' ? '€' : currency;
   return `${formatted} ${symbol}`;
