@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CategorySlice } from '@/db/queries/dashboard';
@@ -9,6 +10,7 @@ import { listExpensesForDate } from '@/db/queries/expenses';
 import { computeFixedTotal } from '@/db/queries/monthClose';
 import { getCurrentMonthKey } from '@/lib/month';
 import { formatCents } from '@/lib/money';
+import { useEnter3D } from '@/lib/motion';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 const theme = colors.light;
@@ -34,6 +36,8 @@ export default function Gastos() {
     }, [])
   );
 
+  const enterStyle = useEnter3D();
+
   if (!categories) {
     return (
       <SafeAreaView style={[styles.screen, styles.center]}>
@@ -47,7 +51,7 @@ export default function Gastos() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <View style={styles.pad}>
+      <Animated.View style={[styles.pad, enterStyle]}>
         <Text style={styles.title}>Gastos</Text>
         <Text style={styles.hint}>
           {formatCents(variableTotal)} variables · {formatCents(fixedTotal)} fijos
@@ -96,7 +100,7 @@ export default function Gastos() {
             </>
           )}
         </ScrollView>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

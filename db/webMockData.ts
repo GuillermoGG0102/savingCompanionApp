@@ -129,6 +129,15 @@ export const mockAssets = [
   { id: 3, name: 'Fondo indexado', type: 'investment' as const, latestValue: 840000 },
 ];
 
+export const mockAssetHistory = [
+  { monthKey: '2026-04', value: 280000 },
+  { monthKey: '2026-05', value: 292000 },
+  { monthKey: '2026-06', value: 298000 },
+  { monthKey: '2026-07', value: 305000 },
+  { monthKey: '2026-08', value: 311000 },
+  { monthKey: '2026-09', value: 320000 },
+];
+
 export const mockTransfers = [
   { id: 1, fromAssetId: 1, toAssetId: 3, amount: 20000, date: `${targetMonthKey}-15`, fromName: 'Cuenta corriente', toName: 'Fondo indexado' },
 ];

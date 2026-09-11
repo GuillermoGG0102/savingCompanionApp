@@ -2,8 +2,9 @@ import { and, eq, or } from 'drizzle-orm';
 import { Platform } from 'react-native';
 
 import { db } from '@/db/client';
-import { mockAssets, mockTransfers } from '@/db/webMockData';
+import { mockAssetHistory, mockAssets, mockTransfers } from '@/db/webMockData';
 import { asset, assetSnapshot, assetTransfer } from '@/db/schema';
+import { getPreviousMonthKey } from '@/lib/month';
 
 export type AssetType = 'cash' | 'bank' | 'investment' | 'crypto' | 'other';
 
@@ -55,6 +56,24 @@ export async function getAssetValuesAsOf(monthKey: string) {
       .filter((s) => s.assetId === a.id && s.monthKey <= monthKey)
       .sort((x, y) => y.monthKey.localeCompare(x.monthKey));
     return { ...a, value: own[0]?.value ?? 0 };
+  });
+}
+
+/** Valor de un activo mes a mes, para la cara trasera de su tarjeta en Activos. */
+export async function getAssetHistory(assetId: number, currentMonthKey: string, months = 6) {
+  if (Platform.OS === 'web') return mockAssetHistory;
+
+  const monthKeys: string[] = [currentMonthKey];
+  let cursor = currentMonthKey;
+  for (let i = 1; i < months; i++) {
+    cursor = getPreviousMonthKey(cursor);
+    monthKeys.unshift(cursor);
+  }
+
+  const snapshots = await db.select().from(assetSnapshot).where(eq(assetSnapshot.assetId, assetId));
+  return monthKeys.map((monthKey) => {
+    const own = snapshots.filter((s) => s.monthKey <= monthKey).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+    return { monthKey, value: own[0]?.value ?? 0 };
   });
 }
 

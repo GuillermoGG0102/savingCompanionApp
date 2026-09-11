@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CategorySlice } from '@/db/queries/dashboard';
@@ -16,6 +17,7 @@ import { getProfile } from '@/db/queries/profile';
 import { calculateNetWorthDelta, calculateSavings, calculateSavingsRate } from '@/lib/calculations';
 import { formatMonthLabel, getCurrentMonthKey, getPreviousMonthKey } from '@/lib/month';
 import { formatCents } from '@/lib/money';
+import { useEnter3D } from '@/lib/motion';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 const theme = colors.light;
@@ -68,6 +70,15 @@ export default function Inicio() {
     }, [])
   );
 
+  const enterStyle = useEnter3D();
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const heroParallaxStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scrollY.value * -0.12 }],
+  }));
+
   if (!data) {
     return (
       <SafeAreaView style={[styles.screen, styles.center]}>
@@ -78,9 +89,10 @@ export default function Inicio() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
+      <Animated.View style={[styles.flex, enterStyle]}>
       <Text style={styles.brand}>SAVING COMPANION</Text>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <Animated.ScrollView contentContainerStyle={styles.scroll} onScroll={onScroll} scrollEventThrottle={16}>
         {data.pendingClose && (
           <Pressable style={styles.banner} onPress={() => router.push('/cierre-mensual')}>
             <Text style={styles.bannerIcon}>📅</Text>
@@ -92,7 +104,7 @@ export default function Inicio() {
           </Pressable>
         )}
 
-        <View style={styles.heroCard}>
+        <Animated.View style={[styles.heroCard, heroParallaxStyle]}>
           <Text style={styles.heroLabel}>Patrimonio total</Text>
           <Text style={styles.heroValue}>{formatCents(data.netWorth)}</Text>
           {data.netWorthDelta !== null && (
@@ -100,7 +112,7 @@ export default function Inicio() {
               {data.netWorthDelta >= 0 ? '▲' : '▼'} {formatCents(Math.abs(data.netWorthDelta))} vs. mes anterior
             </Text>
           )}
-        </View>
+        </Animated.View>
 
         <View style={styles.statRow}>
           <View style={styles.statTile}>
@@ -130,13 +142,15 @@ export default function Inicio() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background },
+  flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   brand: {
     fontFamily: typography.fontMono,

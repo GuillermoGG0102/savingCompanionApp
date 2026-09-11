@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -11,6 +12,7 @@ import {
   createAssetWithSnapshot,
   createTransfer,
   deleteAsset,
+  getAssetHistory,
   listAssetsWithLatestValue,
   listTransfers,
   updateAsset,
@@ -19,6 +21,7 @@ import {
 } from '@/db/queries/assets';
 import { formatCents, parseAmountInput } from '@/lib/money';
 import { getCurrentMonthKey } from '@/lib/month';
+import { useEnter3D } from '@/lib/motion';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 const theme = colors.light;
@@ -38,6 +41,74 @@ type TransferRow = Awaited<ReturnType<typeof listTransfers>>[number];
 
 function toAmountDraft(cents: number) {
   return formatCents(cents).replace(/[^\d.,]/g, '');
+}
+
+type AssetHistory = Awaited<ReturnType<typeof getAssetHistory>>;
+
+/** Tarjeta de activo con giro 3D: delante el valor actual, detrás su histórico. */
+function AssetCard({
+  a,
+  editMode,
+  onStartEdit,
+  onConfirmDelete,
+}: {
+  a: AssetRow;
+  editMode: boolean;
+  onStartEdit: (a: AssetRow) => void;
+  onConfirmDelete: (id: number) => void;
+}) {
+  const [flipped, setFlipped] = useState(false);
+  const [history, setHistory] = useState<AssetHistory | null>(null);
+  const progress = useSharedValue(0);
+
+  function handlePress() {
+    if (editMode) {
+      onStartEdit(a);
+      return;
+    }
+    if (!history) getAssetHistory(a.id, currentMonthKey).then(setHistory);
+    progress.value = withTiming(flipped ? 0 : 1, { duration: 500 });
+    setFlipped((f) => !f);
+  }
+
+  const frontStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 1200 }, { rotateY: `${progress.value * 180}deg` }],
+    backfaceVisibility: 'hidden',
+  }));
+  const backStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 1200 }, { rotateY: `${progress.value * 180 - 180}deg` }],
+    backfaceVisibility: 'hidden',
+  }));
+
+  return (
+    <View>
+      <Animated.View style={[styles.assetRow, frontStyle]}>
+        <Pressable style={styles.assetRowInner} onPress={handlePress}>
+          <View style={styles.assetIcon}>
+            <Text style={styles.assetIconLabel}>{a.name.slice(0, 2).toUpperCase()}</Text>
+          </View>
+          <Text style={styles.assetName}>{a.name}</Text>
+          <Text style={styles.assetValue}>{formatCents(a.latestValue)}</Text>
+          {editMode && (
+            <Pressable style={styles.trashBtn} onPress={() => onConfirmDelete(a.id)}>
+              <View style={styles.trashIcon} />
+            </Pressable>
+          )}
+        </Pressable>
+      </Animated.View>
+      <Animated.View style={[styles.assetRow, styles.cardBack, backStyle]}>
+        <Pressable style={styles.assetRowInner} onPress={handlePress}>
+          <View style={styles.assetIcon}>
+            <Text style={styles.assetIconLabel}>{a.name.slice(0, 2).toUpperCase()}</Text>
+          </View>
+          <Text style={styles.assetName}>{a.name}</Text>
+          <Text style={styles.backHistory}>
+            {history ? `${formatCents(history[0].value)} → ${formatCents(history[history.length - 1].value)}` : '···'}
+          </Text>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
 }
 
 export default function Activos() {
@@ -114,6 +185,8 @@ export default function Activos() {
     reload();
   }
 
+  const enterStyle = useEnter3D();
+
   if (!assets) {
     return (
       <SafeAreaView style={[styles.screen, styles.center]}>
@@ -126,7 +199,7 @@ export default function Activos() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <View style={styles.pad}>
+      <Animated.View style={[styles.pad, enterStyle]}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Activos</Text>
           <Pressable
@@ -167,32 +240,19 @@ export default function Activos() {
                 )}
               </Card>
             ) : (
-              <View key={a.id} style={styles.assetRow}>
-                {confirmDeleteId === a.id ? (
-                  <>
-                    <Text style={styles.confirmLabel}>¿Borrar {a.name}?</Text>
-                    <Pressable onPress={() => handleDelete(a.id)}>
-                      <Text style={styles.confirmYes}>Sí, borrar</Text>
-                    </Pressable>
-                    <Pressable onPress={() => setConfirmDeleteId(null)}>
-                      <Text style={styles.confirmNo}>Cancelar</Text>
-                    </Pressable>
-                  </>
-                ) : (
-                  <Pressable style={styles.assetRowInner} onPress={() => editMode && startEdit(a)} disabled={!editMode}>
-                    <View style={styles.assetIcon}>
-                      <Text style={styles.assetIconLabel}>{a.name.slice(0, 2).toUpperCase()}</Text>
-                    </View>
-                    <Text style={styles.assetName}>{a.name}</Text>
-                    <Text style={styles.assetValue}>{formatCents(a.latestValue)}</Text>
-                    {editMode && (
-                      <Pressable style={styles.trashBtn} onPress={() => setConfirmDeleteId(a.id)}>
-                        <View style={styles.trashIcon} />
-                      </Pressable>
-                    )}
+              confirmDeleteId === a.id ? (
+                <View key={a.id} style={styles.assetRow}>
+                  <Text style={styles.confirmLabel}>¿Borrar {a.name}?</Text>
+                  <Pressable onPress={() => handleDelete(a.id)}>
+                    <Text style={styles.confirmYes}>Sí, borrar</Text>
                   </Pressable>
-                )}
-              </View>
+                  <Pressable onPress={() => setConfirmDeleteId(null)}>
+                    <Text style={styles.confirmNo}>Cancelar</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <AssetCard key={a.id} a={a} editMode={editMode} onStartEdit={startEdit} onConfirmDelete={setConfirmDeleteId} />
+              )
             )
           )}
 
@@ -270,7 +330,7 @@ export default function Activos() {
             ))
           )}
         </ScrollView>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -288,12 +348,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     padding: 14,
+    minHeight: 66,
     borderRadius: radius.lg,
     backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
   },
+  cardBack: { position: 'absolute', top: 0, left: 0, right: 0 },
   assetRowInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  backHistory: { fontFamily: typography.fontMono, fontSize: 11.5, fontWeight: '600', color: theme.textMuted },
   assetIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: theme.textPrimary, alignItems: 'center', justifyContent: 'center' },
   assetIconLabel: { fontFamily: typography.fontDisplay, fontWeight: '700', fontSize: 11, color: theme.background },
   assetName: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 13, color: theme.textPrimary },

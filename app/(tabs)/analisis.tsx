@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -32,6 +33,7 @@ import { computeFixedTotal, computeVariableTotal } from '@/db/queries/monthClose
 import { getProfile, updateProfileGoals } from '@/db/queries/profile';
 import { getCurrentMonthKey } from '@/lib/month';
 import { formatCents, parseAmountInput } from '@/lib/money';
+import { useEnter3D } from '@/lib/motion';
 import { formatMonths, simulateProjection } from '@/lib/projection';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
@@ -168,6 +170,7 @@ export default function Analisis() {
   }, []);
 
   useFocusEffect(load);
+  const enterStyle = useEnter3D();
 
   if (!data) {
     return (
@@ -183,7 +186,7 @@ export default function Analisis() {
   if (patrimonioTotal === 0) {
     return (
       <SafeAreaView style={styles.screen} edges={['top']}>
-        <View style={styles.pad}>
+        <Animated.View style={[styles.pad, enterStyle]}>
           <Text style={styles.title}>Análisis</Text>
           <View style={styles.emptyCard}>
             <View style={styles.emptyIcon}>
@@ -195,7 +198,7 @@ export default function Analisis() {
             </Text>
             <Button label="Registrar mi primer gasto" onPress={() => router.push('/registrar-gasto')} style={{ marginTop: spacing.lg }} />
           </View>
-        </View>
+        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -244,7 +247,7 @@ export default function Analisis() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <View style={styles.pad}>
+      <Animated.View style={[styles.pad, enterStyle]}>
         <Text style={styles.title}>Análisis</Text>
         <Text style={styles.subtitle}>Tu dinero, en profundidad</Text>
 
@@ -556,7 +559,7 @@ export default function Analisis() {
             </View>
           )}
         </ScrollView>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
