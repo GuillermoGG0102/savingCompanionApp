@@ -76,6 +76,9 @@ export default function Gastos() {
           <Pressable style={styles.linkBtn} onPress={() => router.push('/categorias')}>
             <Text style={styles.linkLabel}>Gestionar categorías →</Text>
           </Pressable>
+          <Pressable style={styles.linkBtn} onPress={() => router.push('/ingresos')}>
+            <Text style={styles.linkLabel}>Gestionar ingresos →</Text>
+          </Pressable>
 
           {today.length > 0 && (
             <>

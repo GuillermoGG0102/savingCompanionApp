@@ -10,6 +10,7 @@ import {
   getNetWorthHistory,
   getThisMonthDailyAccumulated,
 } from '@/db/queries/dashboard';
+import { computeAdditionalIncomeForMonth } from '@/db/queries/income';
 import { computeFixedTotal, getMonthClose } from '@/db/queries/monthClose';
 import { getProfile } from '@/db/queries/profile';
 import { calculateNetWorthDelta, calculateSavings, calculateSavingsRate } from '@/lib/calculations';
@@ -36,7 +37,7 @@ export default function Inicio() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [profile, netWorth, history, closePending, fixedTotal, thisMonthDaily, categoryBreakdown] =
+        const [profile, netWorth, history, closePending, fixedTotal, thisMonthDaily, categoryBreakdown, additionalIncome] =
           await Promise.all([
             getProfile(),
             getCurrentNetWorth(),
@@ -45,11 +46,12 @@ export default function Inicio() {
             computeFixedTotal(),
             getThisMonthDailyAccumulated(currentMonthKey),
             getCategoryBreakdown(currentMonthKey),
+            computeAdditionalIncomeForMonth(currentMonthKey),
           ]);
 
         const today = Math.min(new Date().getDate(), thisMonthDaily.length) - 1;
         const variableSoFar = thisMonthDaily[today] ?? 0;
-        const income = profile?.monthlyNetPay ?? 0;
+        const income = (profile?.monthlyNetPay ?? 0) + additionalIncome;
         const savings = calculateSavings(income, fixedTotal, variableSoFar);
         const savingsRate = calculateSavingsRate(savings, income);
         const lastClosed = history[history.length - 1];

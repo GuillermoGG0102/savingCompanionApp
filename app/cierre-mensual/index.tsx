@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
 import { listAssetsWithLatestValue, upsertAssetSnapshot } from '@/db/queries/assets';
+import { computeAdditionalIncomeForMonth } from '@/db/queries/income';
 import { computeFixedTotal, computeVariableTotal, getMonthClose, upsertMonthClose } from '@/db/queries/monthClose';
 import { getProfile } from '@/db/queries/profile';
 import { calculateNetWorth, calculateNetWorthDelta, calculateSavings, calculateSavingsRate } from '@/lib/calculations';
@@ -30,14 +31,19 @@ export default function CierreMensual() {
 
   useEffect(() => {
     (async () => {
-      const [profile, existingClose, assetList, fixed] = await Promise.all([
+      const [profile, existingClose, assetList, fixed, additionalIncome] = await Promise.all([
         getProfile(),
         getMonthClose(monthKey),
         listAssetsWithLatestValue(),
         computeFixedTotal(),
+        computeAdditionalIncomeForMonth(monthKey),
       ]);
 
-      setIncome(existingClose ? formatCents(existingClose.income).replace(' €', '') : formatCents(profile?.monthlyNetPay ?? 0).replace(' €', ''));
+      setIncome(
+        existingClose
+          ? formatCents(existingClose.income).replace(' €', '')
+          : formatCents((profile?.monthlyNetPay ?? 0) + additionalIncome).replace(' €', '')
+      );
       setFixedTotal(fixed);
       setAssets(assetList);
       setValues(Object.fromEntries(assetList.map((a) => [a.id, formatCents(a.latestValue).replace(' €', '')])));

@@ -22,6 +22,7 @@ import {
   type Reconciliation,
 } from '@/db/queries/analysis';
 import { getHistoricalDailyAverage, getNetWorthHistory, getThisMonthDailyAccumulated } from '@/db/queries/dashboard';
+import { computeAdditionalIncomeForMonth } from '@/db/queries/income';
 import { computeFixedTotal, computeVariableTotal } from '@/db/queries/monthClose';
 import { getProfile, updateProfileGoals } from '@/db/queries/profile';
 import { getCurrentMonthKey } from '@/lib/month';
@@ -99,6 +100,7 @@ export default function Analisis() {
       computeVariableTotal(currentMonthKey),
       getReconciliation(currentMonthKey),
       getCategoryAnomalies(currentMonthKey),
+      computeAdditionalIncomeForMonth(currentMonthKey),
     ]).then(
       ([
         netWorthHistory,
@@ -112,8 +114,9 @@ export default function Analisis() {
         variableTotal,
         reconciliation,
         anomalies,
+        additionalIncome,
       ]) => {
-        const currentSavingsCents = profile ? profile.monthlyNetPay - fixedTotal - variableTotal : 0;
+        const currentSavingsCents = profile ? profile.monthlyNetPay + additionalIncome - fixedTotal - variableTotal : 0;
         setData({
           netWorthHistory,
           thisMonthDaily,

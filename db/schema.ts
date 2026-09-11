@@ -15,6 +15,7 @@ export const profile = sqliteTable('profile', {
   payDayOfMonth: integer('pay_day_of_month').notNull(),
   savingsGoalPct: real('savings_goal_pct').notNull().default(25),
   netWorthGoal: integer('net_worth_goal'),
+  payPeriodsPerYear: integer('pay_periods_per_year').notNull().default(12),
 });
 
 export const category = sqliteTable('category', {
@@ -81,6 +82,13 @@ export const assetTransfer = sqliteTable('asset_transfer', {
     .references(() => asset.id),
   amount: integer('amount').notNull(),
   date: text('date').notNull(),
+});
+
+export const additionalIncome = sqliteTable('additional_income', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  amount: integer('amount').notNull(),
+  date: text('date').notNull(),
+  note: text('note'),
 });
 
 export const monthClose = sqliteTable('month_close', {

@@ -114,6 +114,7 @@ export const mockProfile = {
   payDayOfMonth: 25,
   savingsGoalPct: 25,
   netWorthGoal: 4000000,
+  payPeriodsPerYear: 12,
 };
 
 // Mes que se muestra ya cerrado, y activos con el valor que tenían entonces.
@@ -217,6 +218,10 @@ export const mockSubcategoryBreakdown = [
   { subcategoryId: 2, name: 'Restaurantes', amount: 8100 },
   { subcategoryId: 3, name: 'Bares y cafés', amount: 3200 },
   { subcategoryId: 4, name: 'Comida a domicilio', amount: 1000 },
+];
+
+export const mockAdditionalIncome = [
+  { id: 1, amount: 45000, date: `${getCurrentMonthKey()}-03`, note: 'Trabajo freelance' },
 ];
 
 export const mockCategoryByDayOfWeek = [

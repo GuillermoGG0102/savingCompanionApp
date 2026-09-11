@@ -28,3 +28,11 @@ export async function updateProfileGoals(id: number, data: { savingsGoalPct?: nu
   if (Platform.OS === 'web') return;
   await db.update(profile).set(data).where(eq(profile.id, id));
 }
+
+export async function updateProfileIncome(
+  id: number,
+  data: { annualSalary?: number; monthlyNetPay?: number; payPeriodsPerYear?: number }
+) {
+  if (Platform.OS === 'web') return;
+  await db.update(profile).set(data).where(eq(profile.id, id));
+}

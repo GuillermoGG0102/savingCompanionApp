@@ -14,6 +14,7 @@ import {
 import { getPreviousMonthKey } from '@/lib/month';
 import { getAssetValuesAsOf, getTransfersInMonth, listAssetsWithLatestValue, type AssetType } from './assets';
 import { getCategoryBreakdown } from './dashboard';
+import { computeAdditionalIncomeForMonth } from './income';
 import { computeFixedTotal, computeVariableTotal } from './monthClose';
 import { getProfile } from './profile';
 
@@ -25,11 +26,12 @@ function savingsPct(income: number, fixedTotal: number, variableTotal: number): 
 export async function getSavingsRateSeries(currentMonthKey: string, limit = 12): Promise<{ monthKey: string; pct: number }[]> {
   if (Platform.OS === 'web') return mockSavingsRateSeries;
 
-  const [closes, profile, fixedTotal, variableTotal] = await Promise.all([
+  const [closes, profile, fixedTotal, variableTotal, additionalIncome] = await Promise.all([
     db.select().from(monthClose),
     getProfile(),
     computeFixedTotal(),
     computeVariableTotal(currentMonthKey),
+    computeAdditionalIncomeForMonth(currentMonthKey),
   ]);
 
   const series = closes
@@ -38,7 +40,7 @@ export async function getSavingsRateSeries(currentMonthKey: string, limit = 12):
     .map((c) => ({ monthKey: c.monthKey, pct: savingsPct(c.income, c.fixedTotal, c.variableTotal) }));
 
   if (profile) {
-    series.push({ monthKey: currentMonthKey, pct: savingsPct(profile.monthlyNetPay, fixedTotal, variableTotal) });
+    series.push({ monthKey: currentMonthKey, pct: savingsPct(profile.monthlyNetPay + additionalIncome, fixedTotal, variableTotal) });
   }
 
   return series.slice(-limit);
@@ -98,19 +100,20 @@ export async function getReconciliation(currentMonthKey: string): Promise<Reconc
   if (closes.length === 0) return null;
   const prevMonthKey = closes.map((c) => c.monthKey).sort().reverse()[0];
 
-  const [valuesStart, valuesEnd, transfers, fixedTotal, variableTotal, profile] = await Promise.all([
+  const [valuesStart, valuesEnd, transfers, fixedTotal, variableTotal, profile, additionalIncome] = await Promise.all([
     getAssetValuesAsOf(prevMonthKey),
     listAssetsWithLatestValue(),
     getTransfersInMonth(currentMonthKey),
     computeFixedTotal(),
     computeVariableTotal(currentMonthKey),
     getProfile(),
+    computeAdditionalIncomeForMonth(currentMonthKey),
   ]);
 
   const startById = new Map(valuesStart.map((a) => [a.id, a.value]));
   const patrimonioInicial = valuesStart.reduce((sum, a) => sum + a.value, 0);
   const patrimonioFinal = valuesEnd.reduce((sum, a) => sum + a.latestValue, 0);
-  const ahorro = profile ? profile.monthlyNetPay - fixedTotal - variableTotal : 0;
+  const ahorro = profile ? profile.monthlyNetPay + additionalIncome - fixedTotal - variableTotal : 0;
 
   let rendimiento = 0;
   for (const a of valuesEnd) {
