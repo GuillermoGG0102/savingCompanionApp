@@ -1,4 +1,7 @@
+import { IBMPlexMono_600SemiBold } from '@expo-google-fonts/ibm-plex-mono';
+import { SpaceGrotesk_600SemiBold } from '@expo-google-fonts/space-grotesk';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -13,6 +16,10 @@ import { colors, typography } from '@/theme/tokens';
 const theme = colors.light;
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    'Space Grotesk': SpaceGrotesk_600SemiBold,
+    'IBM Plex Mono': IBMPlexMono_600SemiBold,
+  });
   const { success: migrationsDone, error: migrationError } = useMigrations(db, migrations);
   const [seedError, setSeedError] = useState<Error | null>(null);
   const [seedDone, setSeedDone] = useState(false);
@@ -24,7 +31,7 @@ export default function RootLayout() {
       .catch((err: Error) => setSeedError(err));
   }, [migrationsDone]);
 
-  const error = migrationError ?? seedError;
+  const error = migrationError ?? seedError ?? fontError;
   if (error) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
@@ -35,7 +42,7 @@ export default function RootLayout() {
     );
   }
 
-  if (!migrationsDone || !seedDone) {
+  if (!migrationsDone || !seedDone || !fontsLoaded) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator color={theme.accent} />

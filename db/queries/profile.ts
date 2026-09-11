@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { Platform } from 'react-native';
 
 import { db } from '@/db/client';
@@ -21,4 +22,9 @@ export async function getProfile() {
 export async function createProfile(data: NewProfile) {
   const [row] = await db.insert(profile).values(data).returning();
   return row;
+}
+
+export async function updateProfileGoals(id: number, data: { savingsGoalPct?: number; netWorthGoal?: number | null }) {
+  if (Platform.OS === 'web') return;
+  await db.update(profile).set(data).where(eq(profile.id, id));
 }

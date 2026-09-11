@@ -112,6 +112,8 @@ export const mockProfile = {
   monthlyNetPay: 210000,
   currency: 'EUR',
   payDayOfMonth: 25,
+  savingsGoalPct: 25,
+  netWorthGoal: 4000000,
 };
 
 // Mes que se muestra ya cerrado, y activos con el valor que tenían entonces.
@@ -173,3 +175,8 @@ export const mockDailyThisMonthCurve = [
 ];
 
 export const mockDailyAverageCurve = Array.from({ length: 28 }, (_, i) => Math.round(((i + 1) / 28) * 35500));
+
+// Análisis (Tanda 1): tasa de ahorro de los últimos 12 meses, en %.
+export const mockSavingsRateSeries = [18.2, 22.5, 15.8, 27.1, 24.6, 12.3, 29.4, 31.0, 26.7, 20.1, 33.5, 30.4].map(
+  (pct, i) => ({ monthKey: `2026-${String(i + 1).padStart(2, '0')}`, pct })
+);

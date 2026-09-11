@@ -13,6 +13,8 @@ export const profile = sqliteTable('profile', {
   monthlyNetPay: integer('monthly_net_pay').notNull(),
   currency: text('currency').notNull(),
   payDayOfMonth: integer('pay_day_of_month').notNull(),
+  savingsGoalPct: real('savings_goal_pct').notNull().default(25),
+  netWorthGoal: integer('net_worth_goal'),
 });
 
 export const category = sqliteTable('category', {
