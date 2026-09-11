@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { InfoTip } from '@/components/InfoTip';
 import { TextField } from '@/components/TextField';
 import { DailySpendChart } from '@/components/charts/DailySpendChart';
 import { NetWorthLineChart } from '@/components/charts/NetWorthLineChart';
@@ -47,6 +48,18 @@ type AnalisisData = {
 function fmtPct(n: number) {
   return n.toFixed(1).replace('.', ',');
 }
+
+const HELP = {
+  tasaAhorro:
+    'Es el porcentaje de tu nómina que te queda después de pagar gastos fijos y variables. El aro de la derecha muestra qué parte de tu objetivo llevas alcanzada este mes; el número del centro es el objetivo que has fijado.',
+  patrimonio:
+    'Agrupa tus activos en tres bloques según su tipo: Líquido (efectivo y cuentas bancarias), Inversión (fondos, acciones...) y Cripto. Te ayuda a ver si tu dinero está muy concentrado en un solo sitio.',
+  colchon:
+    'Cuántos meses podrías cubrir tus gastos fijos y variables usando solo tus activos líquidos (efectivo y cuentas), si dejaras de ingresar dinero. Los activos ilíquidos (inversión, cripto) no cuentan aquí, porque no siempre se pueden convertir en efectivo al momento.',
+  objetivo:
+    'Calcula, según tu ritmo de ahorro actual, cuánto tardarías en alcanzar el patrimonio que te propongas. Toca la tarjeta para simular qué pasaría si ahorraras un poco más o si tus inversiones rindieran más o menos.',
+  insights: 'Observaciones automáticas calculadas a partir de tu propio historial. No son consejos financieros, solo patrones que detectamos en tus datos.',
+};
 
 export default function Analisis() {
   const [data, setData] = useState<AnalisisData | null>(null);
@@ -152,7 +165,10 @@ export default function Analisis() {
           <View style={styles.hero}>
             <View style={styles.heroRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.heroEyebrow}>Tasa de ahorro</Text>
+                <View style={styles.eyebrowRow}>
+                  <Text style={styles.heroEyebrow}>Tasa de ahorro</Text>
+                  <InfoTip title="Tasa de ahorro" text={HELP.tasaAhorro} dark />
+                </View>
                 <View style={styles.heroPctRow}>
                   <Text style={styles.heroPct}>{fmtPct(pctNow)}</Text>
                   <Text style={styles.heroPctSuffix}>%</Text>
@@ -197,12 +213,18 @@ export default function Analisis() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Composición del patrimonio</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={[styles.cardTitle, styles.noMargin]}>Composición del patrimonio</Text>
+              <InfoTip title="Composición del patrimonio" text={HELP.patrimonio} />
+            </View>
             <PatrimonioDonut data={composicion} />
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Colchón de seguridad</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={[styles.cardTitle, styles.noMargin]}>Colchón de seguridad</Text>
+              <InfoTip title="Colchón de seguridad" text={HELP.colchon} />
+            </View>
             <View style={styles.runwayBigRow}>
               <Text style={styles.runwayBig}>{runway.meses.toFixed(1)}</Text>
               <Text style={styles.runwaySub}>meses de gasto cubiertos con activos líquidos</Text>
@@ -222,7 +244,10 @@ export default function Analisis() {
               else setEditingGoal(true);
             }}
           >
-            <Text style={styles.cardTitle}>Objetivo de patrimonio</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={[styles.cardTitle, styles.noMargin]}>Objetivo de patrimonio</Text>
+              <InfoTip title="Objetivo de patrimonio" text={HELP.objetivo} />
+            </View>
             {editingGoal ? (
               <View style={{ gap: spacing.sm }}>
                 <TextField label="Importe objetivo" value={goalDraft} onChangeText={setGoalDraft} suffix={currency === 'EUR' ? '€' : currency} keyboardType="decimal-pad" />
@@ -244,7 +269,10 @@ export default function Analisis() {
             )}
           </Pressable>
 
-          <Text style={styles.sectionLabel}>Insights</Text>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.sectionLabel}>Insights</Text>
+            <InfoTip title="Insights" text={HELP.insights} />
+          </View>
           {buildInsights(savingsRateSeries, goalPct).map((insight, i) => (
             <View key={i} style={styles.insightCard}>
               <View style={[styles.insightIcon, { backgroundColor: insight.bg }]}>
@@ -323,6 +351,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heroEyebrow: {
     fontFamily: typography.fontMono,
     fontSize: 10.5,
@@ -351,6 +380,8 @@ const styles = StyleSheet.create({
   stepperLabel: { fontFamily: typography.fontDisplay, fontSize: 15, fontWeight: '600', color: '#F4F1EA' },
 
   card: { borderRadius: radius.lg, padding: 16, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  noMargin: { marginBottom: 0 },
   cardTitle: {
     fontFamily: typography.fontMono,
     fontSize: 11,
