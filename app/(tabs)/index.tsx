@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -115,7 +115,7 @@ export default function Inicio() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <Animated.View style={[styles.flex, enterStyle]}>
-      <Text style={styles.brand}>SAVING COMPANION</Text>
+      <Image source={require('@/assets/brand/lockup-horizontal-transparent.png')} style={styles.brand} resizeMode="contain" />
 
       <Animated.ScrollView contentContainerStyle={styles.scroll} onScroll={onScroll} scrollEventThrottle={16}>
         {data.pendingClose && (
@@ -199,14 +199,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   brand: {
-    fontFamily: typography.fontMono,
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    color: theme.accent,
-    fontWeight: '600',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    width: 132,
+    height: 33,
+    marginLeft: spacing.xl,
+    marginTop: spacing.lg,
   },
   scroll: { padding: spacing.xl, gap: spacing.md },
   banner: {
