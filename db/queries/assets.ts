@@ -44,6 +44,27 @@ export async function getAssetSnapshotsForMonth(monthKey: string) {
   return db.select().from(assetSnapshot).where(eq(assetSnapshot.monthKey, monthKey));
 }
 
+/** Cada activo con el valor de su snapshot más reciente que sea igual o anterior a `monthKey`. */
+export async function getAssetValuesAsOf(monthKey: string) {
+  if (Platform.OS === 'web') return mockAssets.map((a) => ({ ...a, value: a.latestValue }));
+
+  const [assets, snapshots] = await Promise.all([db.select().from(asset), db.select().from(assetSnapshot)]);
+
+  return assets.map((a) => {
+    const own = snapshots
+      .filter((s) => s.assetId === a.id && s.monthKey <= monthKey)
+      .sort((x, y) => y.monthKey.localeCompare(x.monthKey));
+    return { ...a, value: own[0]?.value ?? 0 };
+  });
+}
+
+/** Movimientos registrados dentro de un mes concreto (para la reconciliación). */
+export async function getTransfersInMonth(monthKey: string) {
+  if (Platform.OS === 'web') return mockTransfers;
+  const transfers = await db.select().from(assetTransfer);
+  return transfers.filter((t) => t.date.startsWith(monthKey));
+}
+
 /** Guarda el valor de un activo para un mes, sobrescribiendo si ya existía. */
 export async function upsertAssetSnapshot(assetId: number, monthKey: string, value: number) {
   if (Platform.OS === 'web') return;

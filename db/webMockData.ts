@@ -184,3 +184,47 @@ export const mockDailyAverageCurve = Array.from({ length: 28 }, (_, i) => Math.r
 export const mockSavingsRateSeries = [18.2, 22.5, 15.8, 27.1, 24.6, 12.3, 29.4, 31.0, 26.7, 20.1, 33.5, 30.4].map(
   (pct, i) => ({ monthKey: `2026-${String(i + 1).padStart(2, '0')}`, pct })
 );
+
+// Análisis (Tanda 2)
+export const mockReconciliation = {
+  prevMonthKey: priorMonthKey,
+  patrimonioInicial: 1175000,
+  ahorro: 92900,
+  rendimiento: 15600,
+  sinExplicar: mockCurrentNetWorth - 1175000 - 92900 - 15600,
+  patrimonioFinal: mockCurrentNetWorth,
+};
+
+export const mockCategoryAnomalies = [
+  { categoryId: 5, name: 'Hogar', color: '#C9A227', amount: 97690, pct: 1, meanPos: 0.97, isAnomaly: false, z: 0.2 },
+  { categoryId: 1, name: 'Comida', color: '#E0603C', amount: 41200, pct: 0.42, meanPos: 0.27, isAnomaly: true, z: 1.9 },
+  { categoryId: 3, name: 'Ocio', color: '#7A6FF0', amount: 18600, pct: 0.19, meanPos: 0.16, isAnomaly: false, z: 0.3 },
+  { categoryId: 4, name: 'Deporte', color: '#0E9E92', amount: 9500, pct: 0.1, meanPos: 0.12, isAnomaly: false, z: 0.5 },
+  { categoryId: 2, name: 'Transporte', color: '#3F7DE0', amount: 8800, pct: 0.09, meanPos: 0.14, isAnomaly: false, z: 0.6 },
+];
+
+export const mockCategoryHistory = [
+  { monthKey: '2026-04', amount: 15600 },
+  { monthKey: '2026-05', amount: 18200 },
+  { monthKey: '2026-06', amount: 14300 },
+  { monthKey: '2026-07', amount: 21000 },
+  { monthKey: '2026-08', amount: 19800 },
+  { monthKey: '2026-09', amount: 41200 },
+];
+
+export const mockSubcategoryBreakdown = [
+  { subcategoryId: 1, name: 'Supermercado', amount: 28900 },
+  { subcategoryId: 2, name: 'Restaurantes', amount: 8100 },
+  { subcategoryId: 3, name: 'Bares y cafés', amount: 3200 },
+  { subcategoryId: 4, name: 'Comida a domicilio', amount: 1000 },
+];
+
+export const mockCategoryByDayOfWeek = [
+  { label: 'L', amount: 4200 },
+  { label: 'M', amount: 3100 },
+  { label: 'X', amount: 5600 },
+  { label: 'J', amount: 4800 },
+  { label: 'V', amount: 7900 },
+  { label: 'S', amount: 9800 },
+  { label: 'D', amount: 5800 },
+];

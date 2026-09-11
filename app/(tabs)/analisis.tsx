@@ -11,7 +11,16 @@ import { DailySpendChart } from '@/components/charts/DailySpendChart';
 import { NetWorthLineChart } from '@/components/charts/NetWorthLineChart';
 import { PatrimonioDonut } from '@/components/charts/PatrimonioDonut';
 import { RingGauge } from '@/components/charts/RingGauge';
-import { getPatrimonioComposicion, getSafetyRunway, getSavingsRateSeries } from '@/db/queries/analysis';
+import { WaterfallChart } from '@/components/charts/WaterfallChart';
+import {
+  getCategoryAnomalies,
+  getPatrimonioComposicion,
+  getReconciliation,
+  getSafetyRunway,
+  getSavingsRateSeries,
+  type CategoryAnomaly,
+  type Reconciliation,
+} from '@/db/queries/analysis';
 import { getHistoricalDailyAverage, getNetWorthHistory, getThisMonthDailyAccumulated } from '@/db/queries/dashboard';
 import { computeFixedTotal, computeVariableTotal } from '@/db/queries/monthClose';
 import { getProfile, updateProfileGoals } from '@/db/queries/profile';
@@ -43,6 +52,8 @@ type AnalisisData = {
   runway: Awaited<ReturnType<typeof getSafetyRunway>>;
   profile: Profile;
   currentSavingsCents: number;
+  reconciliation: Reconciliation | null;
+  anomalies: CategoryAnomaly[];
 };
 
 function fmtPct(n: number) {
@@ -59,6 +70,10 @@ const HELP = {
   objetivo:
     'Calcula, según tu ritmo de ahorro actual, cuánto tardarías en alcanzar el patrimonio que te propongas. Toca la tarjeta para simular qué pasaría si ahorraras un poco más o si tus inversiones rindieran más o menos.',
   insights: 'Observaciones automáticas calculadas a partir de tu propio historial. No son consejos financieros, solo patrones que detectamos en tus datos.',
+  flujo:
+    'Explica por qué ha cambiado tu patrimonio este mes: lo que has ahorrado, lo que han rendido tus inversiones, y lo que no cuadra (puede ser un gasto que olvidaste registrar o una comisión no anotada). Necesitas al menos un mes ya cerrado para verlo.',
+  anomalias:
+    'Compara el gasto de cada categoría este mes con la media de tus meses anteriores. La marca "σ" indica cuánto se aleja de lo habitual — más de 1,5 significa que es un mes notablemente distinto a lo normal en esa categoría.',
 };
 
 export default function Analisis() {
@@ -78,10 +93,37 @@ export default function Analisis() {
       getProfile(),
       computeFixedTotal(),
       computeVariableTotal(currentMonthKey),
-    ]).then(([netWorthHistory, thisMonthDaily, averageDaily, savingsRateSeries, composicion, runway, profile, fixedTotal, variableTotal]) => {
-      const currentSavingsCents = profile ? profile.monthlyNetPay - fixedTotal - variableTotal : 0;
-      setData({ netWorthHistory, thisMonthDaily, averageDaily, savingsRateSeries, composicion, runway, profile, currentSavingsCents });
-    });
+      getReconciliation(currentMonthKey),
+      getCategoryAnomalies(currentMonthKey),
+    ]).then(
+      ([
+        netWorthHistory,
+        thisMonthDaily,
+        averageDaily,
+        savingsRateSeries,
+        composicion,
+        runway,
+        profile,
+        fixedTotal,
+        variableTotal,
+        reconciliation,
+        anomalies,
+      ]) => {
+        const currentSavingsCents = profile ? profile.monthlyNetPay - fixedTotal - variableTotal : 0;
+        setData({
+          netWorthHistory,
+          thisMonthDaily,
+          averageDaily,
+          savingsRateSeries,
+          composicion,
+          runway,
+          profile,
+          currentSavingsCents,
+          reconciliation,
+          anomalies,
+        });
+      }
+    );
   }, []);
 
   useFocusEffect(load);
@@ -94,7 +136,7 @@ export default function Analisis() {
     );
   }
 
-  const { savingsRateSeries, composicion, runway, profile } = data;
+  const { savingsRateSeries, composicion, runway, profile, anomalies } = data;
   const patrimonioTotal = composicion.reduce((sum, c) => sum + c.amount, 0);
 
   if (patrimonioTotal === 0) {
@@ -148,6 +190,16 @@ export default function Analisis() {
     setData((prev) => (prev && prev.profile ? { ...prev, profile: { ...prev.profile, netWorthGoal: cents } } : prev));
     setEditingGoal(false);
   }
+
+  const today = new Date();
+  const dayOfMonth = Math.min(today.getDate(), data.thisMonthDaily.length);
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const spentSoFar = data.thisMonthDaily[dayOfMonth - 1] ?? 0;
+  const averageFinal = data.averageDaily[data.averageDaily.length - 1] ?? 0;
+  const pace =
+    dayOfMonth > 0 && spentSoFar > 0
+      ? { projectedTotal: (spentSoFar / dayOfMonth) * daysInMonth, overPace: (spentSoFar / dayOfMonth) * daysInMonth > averageFinal * 1.05 }
+      : null;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -210,6 +262,29 @@ export default function Analisis() {
                 </Pressable>
               </View>
             </View>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.cardTitleRow}>
+              <Text style={[styles.cardTitle, styles.noMargin]}>Flujo vs. patrimonio</Text>
+              <InfoTip title="Flujo vs. patrimonio" text={HELP.flujo} />
+            </View>
+            {data.reconciliation ? (
+              <>
+                <WaterfallChart data={data.reconciliation} currency={currency} />
+                {data.reconciliation.sinExplicar !== 0 && (
+                  <Text style={styles.caption}>
+                    <Text style={{ color: theme.negative, fontWeight: '600' }}>
+                      {data.reconciliation.sinExplicar >= 0 ? '+' : ''}
+                      {formatCents(data.reconciliation.sinExplicar, currency)}
+                    </Text>{' '}
+                    no encajan este mes. Puede ser un gasto que olvidaste registrar o una comisión no anotada.
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text style={styles.hint}>🔒 Necesitas al menos un mes ya cerrado para ver esto.</Text>
+            )}
           </View>
 
           <View style={styles.card}>
@@ -292,7 +367,46 @@ export default function Analisis() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Gasto acumulado vs. media histórica</Text>
             <DailySpendChart thisMonth={data.thisMonthDaily} average={data.averageDaily} />
+            {pace && (
+              <Text style={[styles.caption, { color: pace.overPace ? theme.negative : theme.accent, fontWeight: '600' }]}>
+                A este ritmo cerrarás el mes en {formatCents(pace.projectedTotal, currency)} ({pace.overPace ? 'por encima' : 'por debajo'} de lo
+                habitual)
+              </Text>
+            )}
           </View>
+
+          {anomalies.length > 0 && (
+            <View style={styles.card}>
+              <View style={styles.cardTitleRow}>
+                <Text style={[styles.cardTitle, styles.noMargin]}>Categorías fuera de lo normal</Text>
+                <InfoTip title="Categorías fuera de lo normal" text={HELP.anomalias} />
+              </View>
+              {anomalies.map((a, i) => (
+                <Pressable
+                  key={a.categoryId}
+                  style={[styles.anomalyRow, i > 0 && styles.anomalyRowBorder]}
+                  onPress={() => router.push(`/analisis-categoria/${a.categoryId}`)}
+                >
+                  <View style={[styles.anomalyDot, { backgroundColor: a.color }]} />
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.anomalyTop}>
+                      <Text style={styles.anomalyName}>{a.name}</Text>
+                      <Text style={styles.anomalyAmount}>{formatCents(a.amount, currency)}</Text>
+                    </View>
+                    <View style={styles.anomalyBarTrack}>
+                      <View style={[styles.anomalyMeanTick, { left: `${Math.min(100, a.meanPos * 100)}%` }]} />
+                      <View style={[styles.anomalyBarFill, { width: `${Math.min(100, a.pct * 100)}%`, backgroundColor: a.color }]} />
+                    </View>
+                  </View>
+                  {a.isAnomaly && (
+                    <View style={styles.anomalyBadge}>
+                      <Text style={styles.anomalyBadgeLabel}>{a.z.toFixed(1)}σ</Text>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -398,6 +512,19 @@ const styles = StyleSheet.create({
   track: { height: 14, borderRadius: radius.pill, backgroundColor: 'rgba(17,25,23,.06)', overflow: 'hidden' },
   trackFill: { height: '100%', borderRadius: radius.pill, backgroundColor: theme.accent },
   caption: { fontFamily: typography.fontDisplay, fontSize: 11, color: theme.textMuted, marginTop: 10, lineHeight: 16 },
+  hint: { fontFamily: typography.fontDisplay, fontSize: 12.5, color: theme.textMuted, lineHeight: 18, textAlign: 'center', paddingVertical: 8 },
+
+  anomalyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
+  anomalyRowBorder: { borderTopWidth: 1, borderTopColor: theme.border },
+  anomalyDot: { width: 8, height: 8, borderRadius: 2 },
+  anomalyTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  anomalyName: { fontFamily: typography.fontDisplay, fontWeight: '500', fontSize: 13, color: theme.textPrimary },
+  anomalyAmount: { fontFamily: typography.fontMono, fontSize: 12.5, fontWeight: '600', color: theme.textPrimary },
+  anomalyBarTrack: { height: 6, borderRadius: radius.pill, backgroundColor: 'rgba(17,25,23,.06)', overflow: 'hidden', position: 'relative' },
+  anomalyMeanTick: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: theme.textMuted, zIndex: 1 },
+  anomalyBarFill: { height: '100%', borderRadius: radius.pill },
+  anomalyBadge: { paddingVertical: 4, paddingHorizontal: 7, borderRadius: 7, backgroundColor: 'rgba(224,96,60,.1)' },
+  anomalyBadgeLabel: { fontFamily: typography.fontMono, fontSize: 10.5, fontWeight: '600', color: theme.negative },
 
   projText: { fontFamily: typography.fontDisplay, fontSize: 12.5, lineHeight: 18, color: theme.textPrimary },
   projTextStrong: { fontWeight: '600' },
