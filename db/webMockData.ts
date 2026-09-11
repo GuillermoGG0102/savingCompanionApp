@@ -125,9 +125,9 @@ const targetMonthKey = getPreviousMonthKey(getCurrentMonthKey());
 const priorMonthKey = getPreviousMonthKey(targetMonthKey);
 
 export const mockAssets = [
-  { id: 1, name: 'Cuenta corriente', type: 'bank' as const, latestValue: 320000 },
-  { id: 2, name: 'Efectivo', type: 'cash' as const, latestValue: 15000 },
-  { id: 3, name: 'Fondo indexado', type: 'investment' as const, latestValue: 840000 },
+  { id: 1, name: 'Cuenta corriente', type: 'bank' as const, icon: 'caixabank', latestValue: 320000 },
+  { id: 2, name: 'Efectivo', type: 'cash' as const, icon: null, latestValue: 15000 },
+  { id: 3, name: 'Fondo indexado', type: 'investment' as const, icon: null, latestValue: 840000 },
 ];
 
 export const mockAssetHistory = [

@@ -8,10 +8,10 @@ import { getPreviousMonthKey } from '@/lib/month';
 
 export type AssetType = 'cash' | 'bank' | 'investment' | 'crypto' | 'other';
 
-export async function createAssetWithSnapshot(data: { name: string; type: AssetType; value: number; monthKey: string }) {
+export async function createAssetWithSnapshot(data: { name: string; type: AssetType; icon?: string | null; value: number; monthKey: string }) {
   const [createdAsset] = await db
     .insert(asset)
-    .values({ name: data.name, type: data.type })
+    .values({ name: data.name, type: data.type, icon: data.icon ?? null })
     .returning();
 
   await db.insert(assetSnapshot).values({
@@ -100,9 +100,9 @@ export async function upsertAssetSnapshot(assetId: number, monthKey: string, val
   }
 }
 
-export async function updateAsset(id: number, data: { name: string; type: AssetType }) {
+export async function updateAsset(id: number, data: { name: string; type: AssetType; icon?: string | null }) {
   if (Platform.OS === 'web') return;
-  await db.update(asset).set(data).where(eq(asset.id, id));
+  await db.update(asset).set({ ...data, icon: data.icon ?? null }).where(eq(asset.id, id));
 }
 
 /** Borra un activo junto con su histórico de valores y sus movimientos. */

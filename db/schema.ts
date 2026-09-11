@@ -62,6 +62,7 @@ export const asset = sqliteTable('asset', {
   type: text('type', {
     enum: ['cash', 'bank', 'investment', 'crypto', 'other'],
   }).notNull(),
+  icon: text('icon'),
 });
 
 export const assetSnapshot = sqliteTable('asset_snapshot', {

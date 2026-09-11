@@ -1,12 +1,13 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
+import { InstitutionIconPicker } from '@/components/InstitutionIconPicker';
 import { TextField } from '@/components/TextField';
 import {
   createAssetWithSnapshot,
@@ -19,6 +20,7 @@ import {
   upsertAssetSnapshot,
   type AssetType,
 } from '@/db/queries/assets';
+import { getInstitutionIcon } from '@/lib/institutionIcons';
 import { formatCents, parseAmountInput } from '@/lib/money';
 import { getCurrentMonthKey } from '@/lib/month';
 import { useEnter3D, useFlip } from '@/lib/motion';
@@ -44,6 +46,23 @@ function toAmountDraft(cents: number) {
 }
 
 type AssetHistory = Awaited<ReturnType<typeof getAssetHistory>>;
+
+/** Logo de la entidad si el activo tiene uno elegido; si no, las iniciales del nombre. */
+function AssetIcon({ name, icon }: { name: string; icon: string | null | undefined }) {
+  const institution = getInstitutionIcon(icon);
+  if (institution) {
+    return (
+      <View style={styles.assetIconLogo}>
+        <Image source={institution.source} style={styles.assetIconLogoImage} resizeMode="contain" />
+      </View>
+    );
+  }
+  return (
+    <View style={styles.assetIcon}>
+      <Text style={styles.assetIconLabel}>{name.slice(0, 2).toUpperCase()}</Text>
+    </View>
+  );
+}
 
 /** Tarjeta de activo con giro 3D: delante el valor actual, detrás su histórico. */
 function AssetCard({
@@ -73,9 +92,7 @@ function AssetCard({
     <View>
       <Animated.View style={[styles.assetRow, frontStyle]}>
         <Pressable style={styles.assetRowInner} onPress={handlePress}>
-          <View style={styles.assetIcon}>
-            <Text style={styles.assetIconLabel}>{a.name.slice(0, 2).toUpperCase()}</Text>
-          </View>
+          <AssetIcon name={a.name} icon={a.icon} />
           <Text style={styles.assetName}>{a.name}</Text>
           <Text style={styles.assetValue}>{formatCents(a.latestValue)}</Text>
           {editMode && (
@@ -87,9 +104,7 @@ function AssetCard({
       </Animated.View>
       <Animated.View style={[styles.assetRow, styles.cardBack, backStyle]}>
         <Pressable style={styles.assetRowInner} onPress={handlePress}>
-          <View style={styles.assetIcon}>
-            <Text style={styles.assetIconLabel}>{a.name.slice(0, 2).toUpperCase()}</Text>
-          </View>
+          <AssetIcon name={a.name} icon={a.icon} />
           <Text style={styles.assetName}>{a.name}</Text>
           <Text style={styles.backHistory}>
             {history ? `${formatCents(history[0].value)} → ${formatCents(history[history.length - 1].value)}` : '···'}
@@ -107,12 +122,14 @@ export default function Activos() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<AssetType>('bank');
+  const [icon, setIcon] = useState<string | null>(null);
   const [value, setValue] = useState('');
 
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editType, setEditType] = useState<AssetType>('bank');
+  const [editIcon, setEditIcon] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
@@ -132,9 +149,10 @@ export default function Activos() {
 
   async function handleAdd() {
     if (!name.trim() || !value.trim()) return;
-    await createAssetWithSnapshot({ name: name.trim(), type, value: parseAmountInput(value), monthKey: currentMonthKey });
+    await createAssetWithSnapshot({ name: name.trim(), type, icon, value: parseAmountInput(value), monthKey: currentMonthKey });
     setName('');
     setValue('');
+    setIcon(null);
     setShowForm(false);
     reload();
   }
@@ -143,13 +161,14 @@ export default function Activos() {
     setEditingId(a.id);
     setEditName(a.name);
     setEditType(a.type as AssetType);
+    setEditIcon(a.icon ?? null);
     setEditValue(toAmountDraft(a.latestValue));
     setConfirmDeleteId(null);
   }
 
   async function saveEdit() {
     if (editingId == null || !editName.trim()) return;
-    await updateAsset(editingId, { name: editName.trim(), type: editType });
+    await updateAsset(editingId, { name: editName.trim(), type: editType, icon: editIcon });
     await upsertAssetSnapshot(editingId, currentMonthKey, parseAmountInput(editValue));
     setEditingId(null);
     reload();
@@ -212,6 +231,7 @@ export default function Activos() {
                     <Chip key={t.value} label={t.label} selected={editType === t.value} onPress={() => setEditType(t.value)} />
                   ))}
                 </View>
+                <InstitutionIconPicker value={editIcon} onChange={setEditIcon} />
                 <TextField label="Valor actual" value={editValue} onChangeText={setEditValue} suffix="€" keyboardType="decimal-pad" />
                 <Button label="Guardar" onPress={saveEdit} />
                 {confirmDeleteId === a.id ? (
@@ -253,6 +273,7 @@ export default function Activos() {
                   <Chip key={t.value} label={t.label} selected={type === t.value} onPress={() => setType(t.value)} />
                 ))}
               </View>
+              <InstitutionIconPicker value={icon} onChange={setIcon} />
               <TextField label="Valor actual" value={value} onChangeText={setValue} suffix="€" keyboardType="decimal-pad" />
               <Button label="Añadir" onPress={handleAdd} />
             </Card>
@@ -348,6 +369,18 @@ const styles = StyleSheet.create({
   backHistory: { fontFamily: typography.fontMono, fontSize: 11.5, fontWeight: '600', color: theme.textMuted },
   assetIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: theme.textPrimary, alignItems: 'center', justifyContent: 'center' },
   assetIconLabel: { fontFamily: typography.fontDisplay, fontWeight: '700', fontSize: 11, color: theme.background },
+  assetIconLogo: {
+    width: 56,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: theme.surfaceRaised,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+  },
+  assetIconLogoImage: { width: '100%', height: '100%' },
   assetName: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 13, color: theme.textPrimary },
   assetValue: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 14, color: theme.textPrimary },
   trashBtn: { width: 28, height: 28, borderRadius: 9, backgroundColor: 'rgba(224,96,60,.1)', alignItems: 'center', justifyContent: 'center' },
