@@ -12,14 +12,19 @@ import { NetWorthLineChart } from '@/components/charts/NetWorthLineChart';
 import { PatrimonioDonut } from '@/components/charts/PatrimonioDonut';
 import { RingGauge } from '@/components/charts/RingGauge';
 import { WaterfallChart } from '@/components/charts/WaterfallChart';
+import { YoyLineChart } from '@/components/charts/YoyLineChart';
 import {
   getCategoryAnomalies,
   getPatrimonioComposicion,
   getReconciliation,
   getSafetyRunway,
   getSavingsRateSeries,
+  getSeasonalityHeatmap,
+  getYoyComparison,
   type CategoryAnomaly,
   type Reconciliation,
+  type SeasonalityRow,
+  type YoyComparison,
 } from '@/db/queries/analysis';
 import { getHistoricalDailyAverage, getNetWorthHistory, getThisMonthDailyAccumulated } from '@/db/queries/dashboard';
 import { computeAdditionalIncomeForMonth } from '@/db/queries/income';
@@ -41,6 +46,16 @@ const RANGOS = [
   { key: 'Todo', months: 24 },
 ] as const;
 
+const MESES_LBL = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function heatCellColor(v: number | null, mode: 'gasto' | 'ahorro', max: number): string {
+  if (v == null) return 'rgba(17,25,23,.04)';
+  if (mode === 'ahorro' && v < 0) return 'rgba(224,96,60,0.5)';
+  const t = Math.min(1, Math.abs(v) / max);
+  const hue = mode === 'gasto' ? '224,96,60' : '14,158,146';
+  return `rgba(${hue},${(0.12 + t * 0.72).toFixed(2)})`;
+}
+
 type SavingsPoint = { monthKey: string; pct: number };
 type Profile = Awaited<ReturnType<typeof getProfile>>;
 
@@ -55,6 +70,9 @@ type AnalisisData = {
   currentSavingsCents: number;
   reconciliation: Reconciliation | null;
   anomalies: CategoryAnomaly[];
+  yoy: YoyComparison;
+  heatmapGasto: SeasonalityRow[];
+  heatmapAhorro: SeasonalityRow[];
 };
 
 function fmtPct(n: number) {
@@ -79,6 +97,10 @@ const HELP = {
     'El eje horizontal muestra los meses ya cerrados; el vertical, tu patrimonio total en cada uno. Cuanto más alta la barra, más patrimonio tenías ese mes.',
   gastoAcumulado:
     'El eje horizontal son los días del mes; el vertical, el gasto variable acumulado en euros. La línea roja es este mes; la gris, la media de tus meses anteriores — si la roja va por encima, vas gastando más de lo habitual.',
+  interanual:
+    'Compara este mes (y el acumulado del año) con el mismo periodo del año pasado. Se desbloquea cuando llevas un año completo usando la app, para que la comparación tenga sentido.',
+  estacionalidad:
+    'Un mapa de calor con un mes por columna y un año por fila. Cuanto más intenso el color, mayor el gasto (o la tasa de ahorro, si cambias la vista) ese mes. Toca una celda para ver el valor exacto.',
 };
 
 export default function Analisis() {
@@ -86,6 +108,9 @@ export default function Analisis() {
   const [rango, setRango] = useState<(typeof RANGOS)[number]['key']>('1A');
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalDraft, setGoalDraft] = useState('');
+  const [interanualTab, setInteranualTab] = useState<'mes' | 'ytd'>('mes');
+  const [heatmapMode, setHeatmapMode] = useState<'gasto' | 'ahorro'>('gasto');
+  const [heatTip, setHeatTip] = useState<string | null>(null);
 
   const load = useCallback(() => {
     Promise.all([
@@ -101,6 +126,9 @@ export default function Analisis() {
       getReconciliation(currentMonthKey),
       getCategoryAnomalies(currentMonthKey),
       computeAdditionalIncomeForMonth(currentMonthKey),
+      getYoyComparison(currentMonthKey),
+      getSeasonalityHeatmap(currentMonthKey, 'gasto'),
+      getSeasonalityHeatmap(currentMonthKey, 'ahorro'),
     ]).then(
       ([
         netWorthHistory,
@@ -115,6 +143,9 @@ export default function Analisis() {
         reconciliation,
         anomalies,
         additionalIncome,
+        yoy,
+        heatmapGasto,
+        heatmapAhorro,
       ]) => {
         const currentSavingsCents = profile ? profile.monthlyNetPay + additionalIncome - fixedTotal - variableTotal : 0;
         setData({
@@ -122,6 +153,9 @@ export default function Analisis() {
           thisMonthDaily,
           averageDaily,
           savingsRateSeries,
+          yoy,
+          heatmapGasto,
+          heatmapAhorro,
           composicion,
           runway,
           profile,
@@ -292,6 +326,107 @@ export default function Analisis() {
             ) : (
               <Text style={styles.hint}>🔒 Necesitas al menos un mes ya cerrado para ver esto.</Text>
             )}
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.cardTitleRowSpread}>
+              <View style={styles.cardTitleRow}>
+                <Text style={[styles.cardTitle, styles.noMargin]}>Comparativa interanual</Text>
+                <InfoTip title="Comparativa interanual" text={HELP.interanual} />
+              </View>
+              <View style={styles.tabPillRow}>
+                <Pressable style={[styles.tabPill, interanualTab === 'mes' && styles.tabPillOn]} onPress={() => setInteranualTab('mes')}>
+                  <Text style={[styles.tabPillLabel, interanualTab === 'mes' && styles.tabPillLabelOn]}>Mes</Text>
+                </Pressable>
+                <Pressable style={[styles.tabPill, interanualTab === 'ytd' && styles.tabPillOn]} onPress={() => setInteranualTab('ytd')}>
+                  <Text style={[styles.tabPillLabel, interanualTab === 'ytd' && styles.tabPillLabelOn]}>Acumulado</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {data.yoy.locked ? (
+              <Text style={styles.hint}>🔒 Disponible a partir de tu segundo año de uso. Te faltan {data.yoy.mesesFaltan} meses.</Text>
+            ) : interanualTab === 'mes' ? (
+              data.yoy.mes.map((m) => {
+                const maxVal = Math.max(m.prev, m.now, 1);
+                return (
+                  <View key={m.name} style={styles.yoyRow}>
+                    <View style={styles.yoyTop}>
+                      <Text style={styles.yoyName}>{m.name}</Text>
+                      <Text style={styles.yoyValues}>
+                        {formatCents(m.prev, currency)} → <Text style={styles.yoyValuesNow}>{formatCents(m.now, currency)}</Text>
+                      </Text>
+                    </View>
+                    <View style={styles.yoyBarsCol}>
+                      <View style={styles.yoyBarTrack}>
+                        <View style={[styles.yoyBarFill, styles.yoyBarPrev, { width: `${(Math.max(0, m.prev) / maxVal) * 100}%` }]} />
+                      </View>
+                      <View style={styles.yoyBarTrack}>
+                        <View
+                          style={[
+                            styles.yoyBarFill,
+                            { width: `${(Math.max(0, m.now) / maxVal) * 100}%`, backgroundColor: m.name === 'Ahorro' ? theme.accent : theme.negative },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <>
+                <YoyLineChart now={data.yoy.ytdNow} prev={data.yoy.ytdPrev} />
+                <View style={styles.legendRow}>
+                  <Text style={[styles.legendItem, { color: theme.accent }]}>
+                    ● Este año: {formatCents(data.yoy.ytdNow[data.yoy.ytdNow.length - 1] ?? 0, currency)}
+                  </Text>
+                  <Text style={[styles.legendItem, { color: theme.textMuted }]}>
+                    ● Año pasado: {formatCents(data.yoy.ytdPrev[data.yoy.ytdPrev.length - 1] ?? 0, currency)}
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.cardTitleRowSpread}>
+              <View style={styles.cardTitleRow}>
+                <Text style={[styles.cardTitle, styles.noMargin]}>Estacionalidad</Text>
+                <InfoTip title="Estacionalidad" text={HELP.estacionalidad} />
+              </View>
+              <Pressable onPress={() => setHeatmapMode((m) => (m === 'gasto' ? 'ahorro' : 'gasto'))}>
+                <Text style={styles.heatmapToggle}>{heatmapMode === 'gasto' ? 'Ver tasa de ahorro' : 'Ver gasto'}</Text>
+              </Pressable>
+            </View>
+            <View style={styles.heatHeaderRow}>
+              <View style={styles.heatYearCol} />
+              {MESES_LBL.map((m) => (
+                <Text key={m} style={styles.heatHeaderLabel}>
+                  {m}
+                </Text>
+              ))}
+            </View>
+            {(() => {
+              const rows = heatmapMode === 'gasto' ? data.heatmapGasto : data.heatmapAhorro;
+              const maxHeat = Math.max(
+                ...rows.flatMap((r) => r.cells).filter((v): v is number => v != null).map(Math.abs),
+                1
+              );
+              return rows.map((row) => (
+                <View key={row.year} style={styles.heatRow}>
+                  <Text style={styles.heatYearLabel}>{row.year}</Text>
+                  {row.cells.map((v, i) => (
+                    <Pressable
+                      key={i}
+                      disabled={v == null}
+                      style={[styles.heatCell, { backgroundColor: heatCellColor(v, heatmapMode, maxHeat) }]}
+                      onPress={() => setHeatTip(`${MESES_LBL[i]} ${row.year} · ${heatmapMode === 'gasto' ? formatCents(v ?? 0, currency) : `${fmtPct(v ?? 0)}%`}`)}
+                    />
+                  ))}
+                </View>
+              ));
+            })()}
+            {heatTip && <Text style={styles.caption}>{heatTip}</Text>}
           </View>
 
           <View style={styles.card}>
@@ -508,7 +643,35 @@ const styles = StyleSheet.create({
 
   card: { borderRadius: radius.lg, padding: 16, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  cardTitleRowSpread: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', rowGap: 8 },
   noMargin: { marginBottom: 0 },
+
+  tabPillRow: { flexDirection: 'row', gap: 4, backgroundColor: 'rgba(17,25,23,.06)', borderRadius: 10, padding: 3 },
+  tabPill: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
+  tabPillOn: { backgroundColor: theme.textPrimary },
+  tabPillLabel: { fontFamily: typography.fontDisplay, fontSize: 10.5, fontWeight: '600', color: theme.textSecondary },
+  tabPillLabelOn: { color: theme.background },
+
+  yoyRow: { marginBottom: 13 },
+  yoyTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  yoyName: { fontFamily: typography.fontDisplay, fontWeight: '500', fontSize: 12.5, color: theme.textPrimary },
+  yoyValues: { fontFamily: typography.fontMono, fontSize: 11, color: theme.textMuted },
+  yoyValuesNow: { color: theme.textPrimary, fontWeight: '600' },
+  yoyBarsCol: { gap: 4 },
+  yoyBarTrack: { height: 6, borderRadius: radius.pill, backgroundColor: 'rgba(17,25,23,.06)', overflow: 'hidden' },
+  yoyBarFill: { height: '100%', borderRadius: radius.pill },
+  yoyBarPrev: { backgroundColor: 'rgba(17,25,23,.2)' },
+
+  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 8 },
+  legendItem: { fontFamily: typography.fontDisplay, fontSize: 10.5, fontWeight: '600' },
+
+  heatmapToggle: { fontFamily: typography.fontDisplay, fontSize: 11, fontWeight: '600', color: theme.accent },
+  heatHeaderRow: { flexDirection: 'row', gap: 3, marginBottom: 4 },
+  heatYearCol: { width: 22 },
+  heatHeaderLabel: { flex: 1, fontFamily: typography.fontMono, fontSize: 8.5, color: theme.textMuted, textAlign: 'center' },
+  heatRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 3 },
+  heatYearLabel: { width: 22, fontFamily: typography.fontMono, fontSize: 9, fontWeight: '600', color: theme.textMuted },
+  heatCell: { flex: 1, aspectRatio: 1, borderRadius: 5 },
   cardTitle: {
     fontFamily: typography.fontMono,
     fontSize: 11,

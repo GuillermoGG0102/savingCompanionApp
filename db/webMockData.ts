@@ -220,6 +220,30 @@ export const mockSubcategoryBreakdown = [
   { subcategoryId: 4, name: 'Comida a domicilio', amount: 1000 },
 ];
 
+// Análisis (Tanda 3)
+export const mockYoyComparison = {
+  locked: false,
+  mesesFaltan: 0,
+  mes: [
+    { name: 'Ingresos', prev: 238000, now: 245000 },
+    { name: 'Fijos', prev: 108000, now: 113400 },
+    { name: 'Variables', prev: 90000, now: 88400 },
+    { name: 'Ahorro', prev: 40000, now: 43200 },
+  ],
+  ytdNow: [43200, 86400, 132600, 178100, 220800, 268400, 310900, 356200, 401700],
+  ytdPrev: [35000, 71200, 108500, 145900, 183200, 220600, 258100, 296400, 335800],
+};
+
+export const mockHeatmapGasto = [
+  { year: '2025', cells: [78000, 76000, 82000, 79000, 81000, 70000, 98000, 145000, 90000, 87000, 91000, 136000] },
+  { year: '2026', cells: [79000, 76200, 88000, 101000, 83500, 109000, 104800, 138000, 88400, null, null, null] },
+];
+
+export const mockHeatmapAhorro = [
+  { year: '2025', cells: [28.4, 29.1, 24.8, 27.6, 25.9, 32.1, 18.4, 8.2, 22.6, 24.1, 23.0, 12.5] },
+  { year: '2026', cells: [27.9, 28.8, 23.5, 20.1, 26.4, 19.2, 20.8, 15.0, 30.4, null, null, null] },
+];
+
 export const mockAdditionalIncome = [
   { id: 1, amount: 45000, date: `${getCurrentMonthKey()}-03`, note: 'Trabajo freelance' },
 ];

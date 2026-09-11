@@ -7,9 +7,12 @@ import {
   mockCategoryAnomalies,
   mockCategoryByDayOfWeek,
   mockCategoryHistory,
+  mockHeatmapAhorro,
+  mockHeatmapGasto,
   mockReconciliation,
   mockSavingsRateSeries,
   mockSubcategoryBreakdown,
+  mockYoyComparison,
 } from '@/db/webMockData';
 import { getPreviousMonthKey } from '@/lib/month';
 import { getAssetValuesAsOf, getTransfersInMonth, listAssetsWithLatestValue, type AssetType } from './assets';
@@ -252,4 +255,104 @@ export async function getCategoryByDayOfWeek(categoryId: number, monthKey: strin
   }
 
   return DAY_LABELS.map((label, i) => ({ label, amount: totals[i] }));
+}
+
+function shiftYear(monthKey: string, delta: number): string {
+  const [y, m] = monthKey.split('-');
+  return `${Number(y) + delta}-${m}`;
+}
+
+export type YoyMetric = { name: string; prev: number; now: number };
+export type YoyComparison = { mes: YoyMetric[]; ytdNow: number[]; ytdPrev: number[]; locked: boolean; mesesFaltan: number };
+
+/**
+ * Compara ingresos/fijos/variables/ahorro de este mes con el mismo mes del
+ * año pasado, y el acumulado del año en curso (YTD) frente al año anterior.
+ * Se desbloquea a partir de tu segundo año de uso (12 meses de histórico).
+ */
+export async function getYoyComparison(currentMonthKey: string): Promise<YoyComparison> {
+  if (Platform.OS === 'web') return mockYoyComparison;
+
+  const [closes, profile, fixedTotal, variableTotal, additionalIncome] = await Promise.all([
+    db.select().from(monthClose),
+    getProfile(),
+    computeFixedTotal(),
+    computeVariableTotal(currentMonthKey),
+    computeAdditionalIncomeForMonth(currentMonthKey),
+  ]);
+
+  const totalMonths = closes.length + 1;
+  if (totalMonths < 12) {
+    return { mes: [], ytdNow: [], ytdPrev: [], locked: true, mesesFaltan: Math.max(0, 12 - totalMonths) };
+  }
+
+  const closeByKey = new Map(closes.map((c) => [c.monthKey, c]));
+  const nowIngresos = (profile?.monthlyNetPay ?? 0) + additionalIncome;
+  const nowAhorro = nowIngresos - fixedTotal - variableTotal;
+
+  const prevClose = closeByKey.get(shiftYear(currentMonthKey, -1));
+  const prevIngresos = prevClose?.income ?? 0;
+  const prevFijos = prevClose?.fixedTotal ?? 0;
+  const prevVariables = prevClose?.variableTotal ?? 0;
+
+  const mes: YoyMetric[] = [
+    { name: 'Ingresos', prev: prevIngresos, now: nowIngresos },
+    { name: 'Fijos', prev: prevFijos, now: fixedTotal },
+    { name: 'Variables', prev: prevVariables, now: variableTotal },
+    { name: 'Ahorro', prev: prevIngresos - prevFijos - prevVariables, now: nowAhorro },
+  ];
+
+  const [year, month] = currentMonthKey.split('-').map(Number);
+  let cumNow = 0;
+  let cumPrev = 0;
+  const ytdNow: number[] = [];
+  const ytdPrev: number[] = [];
+  for (let m = 1; m <= month; m++) {
+    const mk = `${year}-${String(m).padStart(2, '0')}`;
+    const mkPrev = `${year - 1}-${String(m).padStart(2, '0')}`;
+    const c = mk === currentMonthKey ? undefined : closeByKey.get(mk);
+    const ahorroThis = mk === currentMonthKey ? nowAhorro : c ? c.income - c.fixedTotal - c.variableTotal : 0;
+    const cPrev = closeByKey.get(mkPrev);
+    const ahorroPrev = cPrev ? cPrev.income - cPrev.fixedTotal - cPrev.variableTotal : 0;
+    cumNow += ahorroThis;
+    cumPrev += ahorroPrev;
+    ytdNow.push(cumNow);
+    ytdPrev.push(cumPrev);
+  }
+
+  return { mes, ytdNow, ytdPrev, locked: false, mesesFaltan: 0 };
+}
+
+export type SeasonalityRow = { year: string; cells: (number | null)[] };
+
+/** Mapa de calor mes a mes por año: gasto variable o tasa de ahorro, según `mode`. */
+export async function getSeasonalityHeatmap(currentMonthKey: string, mode: 'gasto' | 'ahorro'): Promise<SeasonalityRow[]> {
+  if (Platform.OS === 'web') return mode === 'gasto' ? mockHeatmapGasto : mockHeatmapAhorro;
+
+  const [closes, profile, fixedTotal, variableTotal, additionalIncome] = await Promise.all([
+    db.select().from(monthClose),
+    getProfile(),
+    computeFixedTotal(),
+    computeVariableTotal(currentMonthKey),
+    computeAdditionalIncomeForMonth(currentMonthKey),
+  ]);
+
+  const byYear = new Map<string, (number | null)[]>();
+  function ensureYear(y: string) {
+    if (!byYear.has(y)) byYear.set(y, new Array(12).fill(null));
+    return byYear.get(y)!;
+  }
+
+  for (const c of closes) {
+    const [y, m] = c.monthKey.split('-');
+    ensureYear(y)[Number(m) - 1] = mode === 'gasto' ? c.variableTotal : savingsPct(c.income, c.fixedTotal, c.variableTotal);
+  }
+
+  const [curYear, curMonth] = currentMonthKey.split('-');
+  const nowIncome = (profile?.monthlyNetPay ?? 0) + additionalIncome;
+  ensureYear(curYear)[Number(curMonth) - 1] = mode === 'gasto' ? variableTotal : savingsPct(nowIncome, fixedTotal, variableTotal);
+
+  return Array.from(byYear.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([year, cells]) => ({ year, cells }));
 }
