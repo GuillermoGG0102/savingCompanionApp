@@ -128,6 +128,10 @@ export const mockAssets = [
   { id: 3, name: 'Fondo indexado', type: 'investment' as const, latestValue: 840000 },
 ];
 
+export const mockTransfers = [
+  { id: 1, fromAssetId: 1, toAssetId: 3, amount: 20000, date: `${targetMonthKey}-15`, fromName: 'Cuenta corriente', toName: 'Fondo indexado' },
+];
+
 export const mockFixedTotal = mockFixedExpenses.filter((e) => e.active).reduce((sum, e) => sum + e.amount, 0);
 export const mockVariableTotal = 42350;
 

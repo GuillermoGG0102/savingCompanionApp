@@ -1,9 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import { Platform } from 'react-native';
 
 import { db } from '@/db/client';
-import { mockAssets } from '@/db/webMockData';
-import { asset, assetSnapshot } from '@/db/schema';
+import { mockAssets, mockTransfers } from '@/db/webMockData';
+import { asset, assetSnapshot, assetTransfer } from '@/db/schema';
 
 export type AssetType = 'cash' | 'bank' | 'investment' | 'crypto' | 'other';
 
@@ -58,4 +58,45 @@ export async function upsertAssetSnapshot(assetId: number, monthKey: string, val
   } else {
     await db.insert(assetSnapshot).values({ assetId, monthKey, value });
   }
+}
+
+export async function updateAsset(id: number, data: { name: string; type: AssetType }) {
+  if (Platform.OS === 'web') return;
+  await db.update(asset).set(data).where(eq(asset.id, id));
+}
+
+/** Borra un activo junto con su histórico de valores y sus movimientos. */
+export async function deleteAsset(id: number) {
+  if (Platform.OS === 'web') return;
+  await db.delete(assetSnapshot).where(eq(assetSnapshot.assetId, id));
+  await db.delete(assetTransfer).where(or(eq(assetTransfer.fromAssetId, id), eq(assetTransfer.toAssetId, id)));
+  await db.delete(asset).where(eq(asset.id, id));
+}
+
+export type TransferRow = Awaited<ReturnType<typeof listTransfers>>[number];
+
+/** Movimientos de dinero entre activos, más recientes primero. */
+export async function listTransfers() {
+  if (Platform.OS === 'web') return mockTransfers;
+
+  const [transfers, assets] = await Promise.all([db.select().from(assetTransfer), db.select().from(asset)]);
+  const nameById = new Map(assets.map((a) => [a.id, a.name]));
+
+  return transfers
+    .map((t) => ({ ...t, fromName: nameById.get(t.fromAssetId) ?? '?', toName: nameById.get(t.toAssetId) ?? '?' }))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+}
+
+/** Transfiere dinero de un activo a otro, actualizando el valor actual de ambos y registrando el movimiento. */
+export async function createTransfer(data: { fromAssetId: number; toAssetId: number; amount: number; date: string; monthKey: string }) {
+  if (Platform.OS === 'web') return;
+
+  const assets = await listAssetsWithLatestValue();
+  const from = assets.find((a) => a.id === data.fromAssetId);
+  const to = assets.find((a) => a.id === data.toAssetId);
+  if (!from || !to) return;
+
+  await upsertAssetSnapshot(data.fromAssetId, data.monthKey, from.latestValue - data.amount);
+  await upsertAssetSnapshot(data.toAssetId, data.monthKey, to.latestValue + data.amount);
+  await db.insert(assetTransfer).values({ fromAssetId: data.fromAssetId, toAssetId: data.toAssetId, amount: data.amount, date: data.date });
 }

@@ -71,6 +71,18 @@ export const assetSnapshot = sqliteTable('asset_snapshot', {
   value: integer('value').notNull(),
 });
 
+export const assetTransfer = sqliteTable('asset_transfer', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  fromAssetId: integer('from_asset_id')
+    .notNull()
+    .references(() => asset.id),
+  toAssetId: integer('to_asset_id')
+    .notNull()
+    .references(() => asset.id),
+  amount: integer('amount').notNull(),
+  date: text('date').notNull(),
+});
+
 export const monthClose = sqliteTable('month_close', {
   monthKey: text('month_key').primaryKey(),
   income: integer('income').notNull(),
