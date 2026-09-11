@@ -221,6 +221,9 @@ export default function Activos() {
             variant="secondary"
             onPress={() => router.push({ pathname: '/cierre-mensual', params: { monthKey: currentMonthKey } })}
           />
+          <Pressable onPress={() => router.push('/cierres')}>
+            <Text style={styles.linkCenter}>Ver cierres anteriores →</Text>
+          </Pressable>
 
           <View style={styles.movRow}>
             <Text style={styles.sectionLabel}>Movimientos</Text>
@@ -330,6 +333,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   movNew: { fontFamily: typography.fontDisplay, fontSize: 12.5, fontWeight: '600', color: theme.accent },
+  linkCenter: { fontFamily: typography.fontDisplay, fontSize: 12.5, fontWeight: '600', color: theme.textSecondary, textAlign: 'center' },
   emptyTransfers: { fontFamily: typography.fontDisplay, fontSize: 12.5, color: theme.textMuted, textAlign: 'center', paddingVertical: spacing.md },
   transferRow: {
     flexDirection: 'row',

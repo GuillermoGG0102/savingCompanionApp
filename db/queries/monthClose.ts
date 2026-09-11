@@ -45,3 +45,16 @@ export async function upsertMonthClose(data: NewMonthClose) {
     await db.insert(monthClose).values(data);
   }
 }
+
+/** Todos los cierres de mes, más recientes primero. */
+export async function listMonthCloses() {
+  if (Platform.OS === 'web') return mockMonthCloses;
+
+  const rows = await db.select().from(monthClose);
+  return rows.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+}
+
+export async function deleteMonthClose(monthKey: string) {
+  if (Platform.OS === 'web') return;
+  await db.delete(monthClose).where(eq(monthClose.monthKey, monthKey));
+}

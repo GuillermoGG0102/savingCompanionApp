@@ -74,6 +74,10 @@ const HELP = {
     'Explica por qué ha cambiado tu patrimonio este mes: lo que has ahorrado, lo que han rendido tus inversiones, y lo que no cuadra (puede ser un gasto que olvidaste registrar o una comisión no anotada). Necesitas al menos un mes ya cerrado para verlo.',
   anomalias:
     'Compara el gasto de cada categoría este mes con la media de tus meses anteriores. La marca "σ" indica cuánto se aleja de lo habitual — más de 1,5 significa que es un mes notablemente distinto a lo normal en esa categoría.',
+  evolucion:
+    'El eje horizontal muestra los meses ya cerrados; el vertical, tu patrimonio total en cada uno. Cuanto más alta la barra, más patrimonio tenías ese mes.',
+  gastoAcumulado:
+    'El eje horizontal son los días del mes; el vertical, el gasto variable acumulado en euros. La línea roja es este mes; la gris, la media de tus meses anteriores — si la roja va por encima, vas gastando más de lo habitual.',
 };
 
 export default function Analisis() {
@@ -359,13 +363,19 @@ export default function Analisis() {
 
           {data.netWorthHistory.length > 1 && (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Evolución del patrimonio</Text>
+              <View style={styles.cardTitleRow}>
+                <Text style={[styles.cardTitle, styles.noMargin]}>Evolución del patrimonio</Text>
+                <InfoTip title="Evolución del patrimonio" text={HELP.evolucion} />
+              </View>
               <NetWorthLineChart data={data.netWorthHistory} />
             </View>
           )}
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Gasto acumulado vs. media histórica</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={[styles.cardTitle, styles.noMargin]}>Gasto acumulado vs. media histórica</Text>
+              <InfoTip title="Gasto acumulado vs. media histórica" text={HELP.gastoAcumulado} />
+            </View>
             <DailySpendChart thisMonth={data.thisMonthDaily} average={data.averageDaily} />
             {pace && (
               <Text style={[styles.caption, { color: pace.overPace ? theme.negative : theme.accent, fontWeight: '600' }]}>
