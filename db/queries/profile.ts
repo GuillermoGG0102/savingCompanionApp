@@ -36,3 +36,8 @@ export async function updateProfileIncome(
   if (Platform.OS === 'web') return;
   await db.update(profile).set(data).where(eq(profile.id, id));
 }
+
+export async function updateProfileName(id: number, name: string) {
+  if (Platform.OS === 'web') return;
+  await db.update(profile).set({ name }).where(eq(profile.id, id));
+}

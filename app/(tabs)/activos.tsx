@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
@@ -21,7 +21,7 @@ import {
 } from '@/db/queries/assets';
 import { formatCents, parseAmountInput } from '@/lib/money';
 import { getCurrentMonthKey } from '@/lib/month';
-import { useEnter3D } from '@/lib/motion';
+import { useEnter3D, useFlip } from '@/lib/motion';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
 const theme = colors.light;
@@ -57,9 +57,8 @@ function AssetCard({
   onStartEdit: (a: AssetRow) => void;
   onConfirmDelete: (id: number) => void;
 }) {
-  const [flipped, setFlipped] = useState(false);
   const [history, setHistory] = useState<AssetHistory | null>(null);
-  const progress = useSharedValue(0);
+  const { toggle, frontStyle, backStyle } = useFlip();
 
   function handlePress() {
     if (editMode) {
@@ -67,18 +66,8 @@ function AssetCard({
       return;
     }
     if (!history) getAssetHistory(a.id, currentMonthKey).then(setHistory);
-    progress.value = withTiming(flipped ? 0 : 1, { duration: 500 });
-    setFlipped((f) => !f);
+    toggle();
   }
-
-  const frontStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1200 }, { rotateY: `${progress.value * 180}deg` }],
-    backfaceVisibility: 'hidden',
-  }));
-  const backStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1200 }, { rotateY: `${progress.value * 180 - 180}deg` }],
-    backfaceVisibility: 'hidden',
-  }));
 
   return (
     <View>

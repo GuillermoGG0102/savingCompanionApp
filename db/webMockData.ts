@@ -108,6 +108,7 @@ export const mockExpensesToday = [
 
 export const mockProfile = {
   id: 1,
+  name: 'Marta',
   annualSalary: 3600000,
   monthlyNetPay: 210000,
   currency: 'EUR',

@@ -9,6 +9,7 @@ import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const profile = sqliteTable('profile', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name'),
   annualSalary: integer('annual_salary').notNull(),
   monthlyNetPay: integer('monthly_net_pay').notNull(),
   currency: text('currency').notNull(),
