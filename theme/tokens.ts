@@ -20,6 +20,7 @@ export interface ColorTokens {
   negative: string;
   warning: string;
   cardGradientFrom: string;
+  cardGradientMid: string;
   cardGradientTo: string;
 }
 
@@ -37,8 +38,9 @@ const light: ColorTokens = {
   positive: '#0E9E92',
   negative: '#E0603C',
   warning: '#C9A227',
-  cardGradientFrom: '#123B37',
-  cardGradientTo: '#0B2A26',
+  cardGradientFrom: '#1E6058',
+  cardGradientMid: '#123B37',
+  cardGradientTo: '#081F1B',
 };
 
 const dark: ColorTokens = {
@@ -55,8 +57,9 @@ const dark: ColorTokens = {
   positive: '#22D3C5',
   negative: '#F0A08A',
   warning: '#C9A227',
-  cardGradientFrom: '#123B37',
-  cardGradientTo: '#06231F',
+  cardGradientFrom: '#1E6058',
+  cardGradientMid: '#123B37',
+  cardGradientTo: '#04140F',
 };
 
 export const colors: Record<ThemeName, ColorTokens> = { light, dark };

@@ -179,12 +179,15 @@ export default function Inicio() {
           <View>
             <Animated.View style={frontStyle}>
               <LinearGradient
-                colors={[theme.cardGradientFrom, theme.cardGradientTo]}
+                colors={[theme.cardGradientFrom, theme.cardGradientMid, theme.cardGradientTo]}
+                locations={[0, 0.55, 1]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.heroCard}
               >
-                <View style={styles.glowBlob} pointerEvents="none" />
+                <View style={styles.glowBlobOuter} pointerEvents="none" />
+                <View style={styles.glowBlobMid} pointerEvents="none" />
+                <View style={styles.glowBlobCore} pointerEvents="none" />
                 <Pressable onPress={toggleFlip}>
                   <View style={styles.heroTopRow}>
                     <Text style={styles.heroLabel}>Ahorro del mes</Text>
@@ -350,14 +353,32 @@ const styles = StyleSheet.create({
   bannerGo: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12, color: theme.accentStrong },
 
   heroCard: { borderRadius: 24, padding: 20, overflow: 'hidden', minHeight: 210 },
-  glowBlob: {
+  glowBlobOuter: {
+    position: 'absolute',
+    top: -100,
+    right: -90,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(95,233,220,.05)',
+  },
+  glowBlobMid: {
     position: 'absolute',
     top: -60,
     right: -50,
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: 'rgba(34,211,197,.22)',
+    backgroundColor: 'rgba(95,233,220,.11)',
+  },
+  glowBlobCore: {
+    position: 'absolute',
+    top: -25,
+    right: -15,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(95,233,220,.20)',
   },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   heroLabel: { fontFamily: typography.fontMono, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase', color: '#B9CBC6', fontWeight: '600' },
