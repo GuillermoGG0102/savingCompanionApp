@@ -178,7 +178,7 @@ export default function Analisis() {
 
   async function adjustGoalPct(delta: number) {
     if (!profile) return;
-    const next = Math.max(20, Math.min(60, goalPct + delta));
+    const next = Math.max(0, Math.min(100, goalPct + delta));
     await updateProfileGoals(profile.id, { savingsGoalPct: next });
     setData((prev) => (prev && prev.profile ? { ...prev, profile: { ...prev.profile, savingsGoalPct: next } } : prev));
   }

@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -215,6 +215,12 @@ export default function Activos() {
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>{formatCents(total)}</Text>
           </View>
+
+          <Button
+            label="Cerrar mes"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/cierre-mensual', params: { monthKey: currentMonthKey } })}
+          />
 
           <View style={styles.movRow}>
             <Text style={styles.sectionLabel}>Movimientos</Text>
