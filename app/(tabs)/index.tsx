@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { listAssetsWithLatestValue } from '@/db/queries/assets';
 import type { CategorySlice } from '@/db/queries/dashboard';
 import {
   getCategoryBreakdown,
@@ -11,8 +12,9 @@ import {
   getNetWorthHistory,
   getThisMonthDailyAccumulated,
 } from '@/db/queries/dashboard';
+import { hasAnyExpense } from '@/db/queries/expenses';
 import { computeAdditionalIncomeForMonth } from '@/db/queries/income';
-import { computeFixedTotal, getMonthClose } from '@/db/queries/monthClose';
+import { computeFixedTotal, getMonthClose, listMonthCloses } from '@/db/queries/monthClose';
 import { getProfile } from '@/db/queries/profile';
 import { calculateNetWorthDelta, calculateSavings, calculateSavingsRate } from '@/lib/calculations';
 import { formatMonthLabel, getCurrentMonthKey, getPreviousMonthKey } from '@/lib/month';
@@ -31,6 +33,7 @@ type InicioData = {
   savingsRate: number;
   categoryBreakdown: CategorySlice[];
   pendingClose: boolean;
+  checklist: { key: string; label: string; done: boolean; route: string }[];
 };
 
 export default function Inicio() {
@@ -39,17 +42,31 @@ export default function Inicio() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const [profile, netWorth, history, closePending, fixedTotal, thisMonthDaily, categoryBreakdown, additionalIncome] =
-          await Promise.all([
-            getProfile(),
-            getCurrentNetWorth(),
-            getNetWorthHistory(12),
-            getMonthClose(targetMonthKey),
-            computeFixedTotal(),
-            getThisMonthDailyAccumulated(currentMonthKey),
-            getCategoryBreakdown(currentMonthKey),
-            computeAdditionalIncomeForMonth(currentMonthKey),
-          ]);
+        const [
+          profile,
+          netWorth,
+          history,
+          closePending,
+          fixedTotal,
+          thisMonthDaily,
+          categoryBreakdown,
+          additionalIncome,
+          assets,
+          hasExpense,
+          monthCloses,
+        ] = await Promise.all([
+          getProfile(),
+          getCurrentNetWorth(),
+          getNetWorthHistory(12),
+          getMonthClose(targetMonthKey),
+          computeFixedTotal(),
+          getThisMonthDailyAccumulated(currentMonthKey),
+          getCategoryBreakdown(currentMonthKey),
+          computeAdditionalIncomeForMonth(currentMonthKey),
+          listAssetsWithLatestValue(),
+          hasAnyExpense(),
+          listMonthCloses(),
+        ]);
 
         const today = Math.min(new Date().getDate(), thisMonthDaily.length) - 1;
         const variableSoFar = thisMonthDaily[today] ?? 0;
@@ -58,6 +75,13 @@ export default function Inicio() {
         const savingsRate = calculateSavingsRate(savings, income);
         const lastClosed = history[history.length - 1];
 
+        const checklist = [
+          { key: 'assets', label: 'Añade tu primer activo', done: assets.length > 0, route: '/activos' },
+          { key: 'expense', label: 'Registra tu primer gasto', done: hasExpense, route: '/registrar-gasto' },
+          { key: 'close', label: 'Cierra tu primer mes', done: monthCloses.length > 0, route: '/activos' },
+          { key: 'goal', label: 'Fija tu objetivo de patrimonio', done: !!profile?.netWorthGoal, route: '/analisis' },
+        ].filter((item) => !item.done);
+
         setData({
           netWorth,
           netWorthDelta: lastClosed ? calculateNetWorthDelta(netWorth, lastClosed.netWorth) : null,
@@ -65,6 +89,7 @@ export default function Inicio() {
           savingsRate,
           categoryBreakdown: categoryBreakdown.slice(0, 3),
           pendingClose: !closePending,
+          checklist,
         });
       })();
     }, [])
@@ -142,6 +167,27 @@ export default function Inicio() {
             ))}
           </View>
         )}
+
+        {data.checklist.length > 0 ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Para sacarle el máximo partido</Text>
+            {data.checklist.map((item) => (
+              <Pressable key={item.key} style={styles.checklistRow} onPress={() => router.push(item.route as never)}>
+                <View style={styles.checklistDot} />
+                <Text style={styles.checklistLabel}>{item.label}</Text>
+                <Text style={styles.checklistGo}>→</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Consejo</Text>
+            <Text style={styles.tipText}>
+              Ya tienes lo básico configurado. Echa un vistazo a Análisis de vez en cuando para detectar patrones en tus gastos y ver si vas
+              camino de tu objetivo.
+            </Text>
+          </View>
+        )}
       </Animated.ScrollView>
       </Animated.View>
     </SafeAreaView>
@@ -193,4 +239,9 @@ const styles = StyleSheet.create({
   catDot: { width: 9, height: 9, borderRadius: 3 },
   catName: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12.5, color: theme.textPrimary },
   catValue: { fontFamily: typography.fontMono, fontSize: 12.5, fontWeight: '600', color: theme.textPrimary },
+  checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  checklistDot: { width: 7, height: 7, borderRadius: 2, borderWidth: 1.5, borderColor: theme.accent },
+  checklistLabel: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12.5, color: theme.textPrimary },
+  checklistGo: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 13, color: theme.accent },
+  tipText: { fontFamily: typography.fontDisplay, fontSize: 12.5, lineHeight: 18, color: theme.textSecondary },
 });

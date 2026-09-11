@@ -17,6 +17,12 @@ export async function createExpense(data: NewExpense) {
   return row;
 }
 
+export async function hasAnyExpense(): Promise<boolean> {
+  if (Platform.OS === 'web') return true;
+  const rows = await db.select({ id: expense.id }).from(expense).limit(1);
+  return rows.length > 0;
+}
+
 export async function listExpensesForDate(date: string) {
   if (Platform.OS === 'web') return mockExpensesToday;
 
