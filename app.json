@@ -11,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.tnksteam.savingcompanion",
       "adaptiveIcon": {
         "backgroundColor": "#111917",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -34,6 +35,12 @@
           "backgroundColor": "#F4F1EA"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0e46a222-77ad-4356-980f-81810373d35e"
+      }
+    },
+    "owner": "tnks-team"
   }
 }
