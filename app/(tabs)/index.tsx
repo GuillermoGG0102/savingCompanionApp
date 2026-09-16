@@ -297,6 +297,10 @@ export default function Inicio() {
               </Text>
             </View>
           )}
+
+          <Pressable onPress={() => router.push('/ajustes')}>
+            <Text style={styles.settingsLink}>Ajustes →</Text>
+          </Pressable>
         </Animated.ScrollView>
       </Animated.View>
 
@@ -465,6 +469,14 @@ const styles = StyleSheet.create({
   checklistLabel: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12.5, color: theme.textPrimary },
   checklistGo: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 13, color: theme.accent },
   tipText: { fontFamily: typography.fontDisplay, fontSize: 12.5, lineHeight: 18, color: theme.textSecondary },
+  settingsLink: {
+    fontFamily: typography.fontDisplay,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: theme.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
 
   nameBackdrop: { position: 'absolute', inset: 0, backgroundColor: 'rgba(11,25,22,.42)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   nameSheet: { width: '100%', backgroundColor: theme.background, borderRadius: radius.xl, padding: spacing.xl },

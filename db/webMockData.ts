@@ -106,6 +106,15 @@ export const mockExpensesToday = [
   { id: 2, amount: 480, subcategoryName: 'Bares y cafés', categoryName: 'Comida', categoryColor: '#E0603C' },
 ];
 
+export const mockExpensesMonth = [
+  { id: 1, amount: 3420, date: '2026-09-16', note: null, subcategoryId: 1, subcategoryName: 'Supermercado', categoryId: 2, categoryName: 'Comida', categoryColor: '#E0603C' },
+  { id: 2, amount: 480, date: '2026-09-16', note: null, subcategoryId: 2, subcategoryName: 'Bares y cafés', categoryId: 2, categoryName: 'Comida', categoryColor: '#E0603C' },
+  { id: 3, amount: 1250, date: '2026-09-14', note: 'Cena cumpleaños', subcategoryId: 2, subcategoryName: 'Bares y cafés', categoryId: 2, categoryName: 'Comida', categoryColor: '#E0603C' },
+  { id: 4, amount: 3990, date: '2026-09-10', note: null, subcategoryId: 5, subcategoryName: 'Gimnasio', categoryId: 4, categoryName: 'Deporte', categoryColor: '#0E9E92' },
+  { id: 5, amount: 2200, date: '2026-09-07', note: null, subcategoryId: 6, subcategoryName: 'Ropa', categoryId: 1, categoryName: 'Hogar', categoryColor: '#C9A227' },
+  { id: 6, amount: 900, date: '2026-09-03', note: 'Regalo', subcategoryId: 7, subcategoryName: 'Ocio', categoryId: 5, categoryName: 'Ocio', categoryColor: '#8A928E' },
+];
+
 export const mockProfile = {
   id: 1,
   name: 'Marta',

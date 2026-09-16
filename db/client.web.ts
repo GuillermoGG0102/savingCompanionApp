@@ -5,3 +5,4 @@
  * web aunque no se llegue a renderizar.
  */
 export const db = null as never;
+export const sqlite = null as never;

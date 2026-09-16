@@ -74,6 +74,9 @@ export default function Gastos() {
             ))}
           </View>
 
+          <Pressable style={styles.linkBtn} onPress={() => router.push('/gastos/historial')}>
+            <Text style={styles.linkLabel}>Ver todos los gastos →</Text>
+          </Pressable>
           <Pressable style={styles.linkBtn} onPress={() => router.push('/gastos-fijos')}>
             <Text style={styles.linkLabel}>Gestionar gastos fijos →</Text>
           </Pressable>
