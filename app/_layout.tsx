@@ -8,6 +8,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppLockGate } from '@/components/AppLockGate';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { seedDefaultCategories } from '@/db/seed';
@@ -53,7 +54,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.flex}>
       <SafeAreaProvider>
-        <Stack screenOptions={{ headerShown: false }} />
+        <AppLockGate>
+          <Stack screenOptions={{ headerShown: false }} />
+        </AppLockGate>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

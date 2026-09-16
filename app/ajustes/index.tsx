@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { SecurityLockSetting } from '@/components/SecurityLockSetting';
 import { sqlite } from '@/db/client';
 import { colors, radius, spacing, typography } from '@/theme/tokens';
 
@@ -136,6 +137,11 @@ export default function Ajustes() {
             )}
 
             {message && <Text style={styles.message}>{message}</Text>}
+          </Card>
+
+          <Card style={{ gap: spacing.sm }}>
+            <Text style={styles.cardTitle}>Seguridad</Text>
+            <SecurityLockSetting />
           </Card>
         </ScrollView>
       </View>
