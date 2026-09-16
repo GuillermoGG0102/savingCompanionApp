@@ -46,6 +46,15 @@ export const fixedExpense = sqliteTable('fixed_expense', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
 });
 
+/** Sugerencias de "esto parece un gasto fijo" que el usuario ya rechazó o ya convirtió, para no volver a preguntarlas. */
+export const dismissedFixedSuggestion = sqliteTable('dismissed_fixed_suggestion', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  subcategoryId: integer('subcategory_id')
+    .notNull()
+    .references(() => subcategory.id),
+  dismissedAt: text('dismissed_at').notNull(),
+});
+
 export const expense = sqliteTable('expense', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   subcategoryId: integer('subcategory_id')

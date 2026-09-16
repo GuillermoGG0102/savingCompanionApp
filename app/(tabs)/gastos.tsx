@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { CategorySlice } from '@/db/queries/dashboard';
 import { getCategoryBreakdown } from '@/db/queries/dashboard';
 import { listExpensesForDate } from '@/db/queries/expenses';
+import { dismissFixedExpenseSuggestion, getFixedExpenseCandidates, type FixedExpenseCandidate } from '@/db/queries/fixedExpenseSuggestions';
 import { computeFixedTotal } from '@/db/queries/monthClose';
 import { getCurrentMonthKey } from '@/lib/month';
 import { formatCents } from '@/lib/money';
@@ -23,18 +24,36 @@ export default function Gastos() {
   const [categories, setCategories] = useState<CategorySlice[] | null>(null);
   const [fixedTotal, setFixedTotal] = useState(0);
   const [today, setToday] = useState<TodayExpense[]>([]);
+  const [fixedCandidates, setFixedCandidates] = useState<FixedExpenseCandidate[]>([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      Promise.all([getCategoryBreakdown(currentMonthKey), computeFixedTotal(), listExpensesForDate(todayIso)]).then(
-        ([breakdown, fixed, todayList]) => {
-          setCategories(breakdown);
-          setFixedTotal(fixed);
-          setToday(todayList);
-        }
-      );
-    }, [])
-  );
+  const reload = useCallback(() => {
+    Promise.all([
+      getCategoryBreakdown(currentMonthKey),
+      computeFixedTotal(),
+      listExpensesForDate(todayIso),
+      getFixedExpenseCandidates(currentMonthKey),
+    ]).then(([breakdown, fixed, todayList, candidates]) => {
+      setCategories(breakdown);
+      setFixedTotal(fixed);
+      setToday(todayList);
+      setFixedCandidates(candidates);
+    });
+  }, []);
+
+  useFocusEffect(reload);
+
+  async function handleDismissCandidate(subcategoryId: number) {
+    await dismissFixedExpenseSuggestion(subcategoryId);
+    reload();
+  }
+
+  function handleConvertCandidate(c: FixedExpenseCandidate) {
+    dismissFixedExpenseSuggestion(c.subcategoryId);
+    router.push({
+      pathname: '/gastos-fijos/nuevo',
+      params: { name: c.subcategoryName, categoryId: String(c.categoryId), amount: String(c.avgAmount) },
+    });
+  }
 
   const enterStyle = useEnter3D();
 
@@ -62,6 +81,30 @@ export default function Gastos() {
             <Text style={styles.totalLabel}>Total del mes</Text>
             <Text style={styles.totalValue}>{formatCents(total)}</Text>
           </View>
+
+          {fixedCandidates.length > 0 && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>¿Esto es un gasto fijo?</Text>
+              <Text style={styles.suggestionHint}>Llevas {fixedCandidates[0].months.length} meses pagando un importe parecido en:</Text>
+              {fixedCandidates.map((c) => (
+                <View key={c.subcategoryId} style={styles.suggestionRow}>
+                  <View style={styles.suggestionTop}>
+                    <View style={[styles.catDot, { backgroundColor: c.categoryColor }]} />
+                    <Text style={styles.catName}>{c.subcategoryName}</Text>
+                    <Text style={styles.catValue}>{formatCents(c.avgAmount)}/mes</Text>
+                  </View>
+                  <View style={styles.suggestionActions}>
+                    <Pressable onPress={() => handleConvertCandidate(c)}>
+                      <Text style={styles.suggestionAccept}>Convertir a fijo →</Text>
+                    </Pressable>
+                    <Pressable onPress={() => handleDismissCandidate(c.subcategoryId)}>
+                      <Text style={styles.suggestionReject}>No, es variable</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Por categoría</Text>
@@ -123,6 +166,12 @@ const styles = StyleSheet.create({
   catDot: { width: 9, height: 9, borderRadius: 3 },
   catName: { flex: 1, fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12.5, color: theme.textPrimary },
   catValue: { fontFamily: typography.fontMono, fontSize: 12.5, fontWeight: '600', color: theme.textPrimary },
+  suggestionHint: { fontFamily: typography.fontDisplay, fontSize: 11.5, color: theme.textMuted, marginBottom: 6 },
+  suggestionRow: { paddingVertical: 8, gap: 6, borderTopWidth: 1, borderTopColor: theme.border },
+  suggestionTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  suggestionActions: { flexDirection: 'row', gap: spacing.md, paddingLeft: 19 },
+  suggestionAccept: { fontFamily: typography.fontDisplay, fontSize: 12, fontWeight: '600', color: theme.accent },
+  suggestionReject: { fontFamily: typography.fontDisplay, fontSize: 12, fontWeight: '600', color: theme.textMuted },
   linkBtn: { borderWidth: 1, borderStyle: 'dashed', borderColor: theme.border, borderRadius: radius.md, padding: 12, alignItems: 'center' },
   linkLabel: { fontFamily: typography.fontDisplay, fontWeight: '600', fontSize: 12.5, color: theme.textSecondary },
   expenseRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: radius.md, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },

@@ -106,6 +106,18 @@ export const mockExpensesToday = [
   { id: 2, amount: 480, subcategoryName: 'Bares y cafés', categoryName: 'Comida', categoryColor: '#E0603C' },
 ];
 
+export const mockFixedExpenseCandidates = [
+  {
+    subcategoryId: 99,
+    subcategoryName: 'Streaming',
+    categoryId: 3,
+    categoryName: 'Ocio',
+    categoryColor: '#7A6FF0',
+    avgAmount: 1299,
+    months: ['2026-07', '2026-08', '2026-09'],
+  },
+];
+
 export const mockExpensesMonth = [
   { id: 1, amount: 3420, date: '2026-09-16', note: null, subcategoryId: 1, subcategoryName: 'Supermercado', categoryId: 2, categoryName: 'Comida', categoryColor: '#E0603C' },
   { id: 2, amount: 480, date: '2026-09-16', note: null, subcategoryId: 2, subcategoryName: 'Bares y cafés', categoryId: 2, categoryName: 'Comida', categoryColor: '#E0603C' },

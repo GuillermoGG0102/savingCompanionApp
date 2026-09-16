@@ -43,6 +43,13 @@
       "when": 1789140123313,
       "tag": "0005_brown_thunderbolts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789546884019,
+      "tag": "0006_serious_bishop",
+      "breakpoints": true
     }
   ]
 }
